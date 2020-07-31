@@ -5,7 +5,7 @@ import pandas as pd
 
 
 
-df1 = pd.read_csv("/media/nehleh/295eaca0-f110-4b79-8cbe-bc99f9f61cbd/nehleh/0_Research/PhD/Data/simulationdata/recombination/clonalframe/RAxML_perSiteLLs.likelihood_GTR", sep='\s+', header=None)
+df1 = pd.read_csv("/home/nehleh/PhyloCode/Data/RAxML_perSiteLLs_exampledatset", sep='\s+', header=None)
 ll = df1.to_numpy()
 data = np.array(ll)
 X = data.reshape((-1,1))
