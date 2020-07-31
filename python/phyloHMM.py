@@ -13,5 +13,3 @@ X = X[1:1000000]
 
 
 model = phyloLL_emission.phyloLL_HMM(n_components= 2)
-
-print(model.params)

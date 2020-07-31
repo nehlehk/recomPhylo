@@ -6,9 +6,6 @@ import hmmlearn._utils
 
 
 
-
-
-
 _log = logging.getLogger(__name__)
 
 class phyloLL_HMM(hmmlearn.base._BaseHMM):
@@ -29,8 +26,7 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
         if 's' in self.init_params or not hasattr(self, "startprob_"):
             self.startprob_ = np.full(self.n_components, init)
         if 't' in self.init_params or not hasattr(self, "transmat_"):
-            self.transmat_ = np.full((self.n_components, self.n_components),
-                                     init)
+            self.transmat_ = np.full((self.n_components, self.n_components),init)
         n_fit_scalars_per_param = self._get_n_fit_scalars_per_param()
         n_fit_scalars = sum(n_fit_scalars_per_param[p] for p in self.params)
         if X.size < n_fit_scalars:
