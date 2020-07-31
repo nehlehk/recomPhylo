@@ -6,9 +6,12 @@ import hmmlearn._utils
 
 
 
+
+
+
 _log = logging.getLogger(__name__)
 
-class phyloLL(hmmlearn.base._BaseHMM):
+class phyloLL_HMM(hmmlearn.base._BaseHMM):
 
     def _init(self, X, lengths):
         """Initializes model parameters prior to fitting.
@@ -179,11 +182,20 @@ class phyloLL(hmmlearn.base._BaseHMM):
         # The ``np.where`` calls guard against updating forbidden states
         # or transitions in e.g. a left-right HMM.
         if 's' in self.params:
-            startprob_ = np.maximum(self.startprob_prior - 1 + stats['start'],
-                                    0)
+            startprob_ = np.maximum(self.startprob_prior - 1 + stats['start'], 0)
             self.startprob_ = np.where(self.startprob_ == 0, 0, startprob_)
             normalize(self.startprob_)
         if 't' in self.params:
             transmat_ = np.maximum(self.transmat_prior - 1 + stats['trans'], 0)
             self.transmat_ = np.where(self.transmat_ == 0, 0, transmat_)
             normalize(self.transmat_, axis=1)
+
+
+
+
+
+
+
+
+
+
