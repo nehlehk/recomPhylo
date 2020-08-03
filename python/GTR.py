@@ -7,6 +7,11 @@ import numpy.linalg as la
 
 class GTR:
 
+    def __init__(self, rates, pi):
+        self.rates = rates
+        self.pi = pi
+
+
 
     def give_index(c):
         if c == "A":
@@ -21,7 +26,7 @@ class GTR:
 
 
 
-    def p_matrix(br_length):
+    def p_matrix(self , br_length):
         p = numpy.zeros((4, 4))
 
         mu = 0
@@ -32,14 +37,14 @@ class GTR:
         exchang = numpy.zeros((4, 4))
         s = numpy.zeros((4, 4))
         fun = numpy.zeros(1)
-        a, b, c, d, e = rates
+        a, b, c, d, e = self.rates
         f = 1
 
-        freq = numpy.diag(pi)
-        sqrtPi = numpy.diag(numpy.sqrt(pi))
-        sqrtPiInv = numpy.diag(1.0 / numpy.sqrt(pi))
-        mu = 1 / (2 * ((a * pi[0] * pi[1]) + (b * pi[0] * pi[2]) + (c * pi[0] * pi[3]) + (d * pi[1] * pi[2]) + (
-                e * pi[1] * pi[3]) + (pi[2] * pi[3])))
+        freq = numpy.diag(self.pi)
+        sqrtPi = numpy.diag(numpy.sqrt(self.pi))
+        sqrtPiInv = numpy.diag(1.0 / numpy.sqrt(self.pi))
+        mu = 1 / (2 * ((a * self.pi[0] * self.pi[1]) + (b * self.pi[0] * self.pi[2]) + (c * self.pi[0] * self.pi[3]) + (d * self.pi[1] * self.pi[2]) + (
+                e * self.pi[1] * self.pi[3]) + (self.pi[2] * self.pi[3])))
         exchang[0][1] = exchang[1][0] = a
         exchang[0][2] = exchang[2][0] = b
         exchang[0][3] = exchang[3][0] = c
@@ -67,7 +72,9 @@ class GTR:
 
 
 
-    def computelikelihood(tree, dna):
+    def computelikelihood(self, tree, dna):
+
+        tips = len(dna)
 
         partial = numpy.zeros((2 * tips, 4))
 
@@ -88,32 +95,20 @@ class GTR:
         pos = 0
         for node in tree.postorder_node_iter():
             if node.is_leaf():
-                i = give_index(str(dna[pos]))
+                i = self.give_index(str(dna[pos]))
                 pos += 1
                 # i = give_index(dna[node.index-1])
                 partial[node.index][i] = 1
             else:
                 children = node.child_nodes()
-                partial[node.index] = numpy.dot(p_matrix(children[0].edge_length, model), partial[children[0].index])
+                partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
                 for i in range(1, len(children)):
-                    partial[node.index] *= numpy.dot(p_matrix(children[i].edge_length, model),
+                    partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
                                                      partial[children[i].index])
 
 
-        ll_partial = numpy.zeros(tips - 1)
-        p_index = 0
-        for par in range(tips + 1, tree.seed_node.index + 2, 1):
             temp = 0
-            temp = numpy.sum(partial[par]) * 0.25
-            # ll_partial.append(round(numpy.log(temp),7))
-            ll_partial[p_index] = round(numpy.log(temp), 7)
-            p_index += 1
+            temp = numpy.sum(partial[tree.seed_node.index]) * 0.25
+            ll = round(numpy.log(temp), 7)
 
-        # ll = numpy.sum(partial[12]) * 0.25
-
-        # ll = numpy.sum(partial[tree.seed_node.index]) * 0.25
-
-        # print("likelihood = {} and log-likelihood = {} ".format(round(ll,7) , round(numpy.log(ll),7)))
-        # return round(numpy.log(ll),7)
-        # return 1
-        return ll_partial
+        return ll
