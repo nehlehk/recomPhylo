@@ -197,16 +197,16 @@ class GTR_model:
         tips = len(alignment)
         alignment_len = alignment.sequence_size
 
-        recom_vector = numpy.zeros((tips - 1, alignment_len))
-        clonal_vector = numpy.zeros((tips - 1, alignment_len))
+        clonal_vector = numpy.zeros((alignment_len, tips -1))
+        recom_vector = numpy.zeros((alignment_len, tips -1))
 
         column = self.get_DNA_fromAlignment(alignment)
+
         uniqueCol = list(set(column))
         for i in range(len(uniqueCol)):
-
             indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
-            result = self.expectedLL(tree, uniqueCol[i], internl_node, co_clonal, co_recom)
-            clonal_vector[:, indexes] = result[0]
-            recom_vector[:, indexes] = result[1]
+            result = self.expectedLL(tree, uniqueCol[i], co_clonal, co_recom)
+            clonal_vector[indexes, : ] = result[0]
+            recom_vector[indexes, : ] = result[1]
 
         return clonal_vector, recom_vector

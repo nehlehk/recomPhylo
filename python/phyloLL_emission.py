@@ -2,6 +2,7 @@ import hmmlearn.base
 import numpy as np
 import logging
 import hmmlearn._utils
+import GTR
 
 
 
@@ -10,7 +11,7 @@ _log = logging.getLogger(__name__)
 
 class phyloLL_HMM(hmmlearn.base._BaseHMM):
 
-    def _init(self, X, lengths):
+    def _init(self, X , Y, lengths):
         """Initializes model parameters prior to fitting.
 
         Parameters
@@ -59,7 +60,7 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             raise ValueError("rows of transmat_ must sum to 1.0 (got {})"
                              .format(self.transmat_.sum(axis=1)))
 
-    def _compute_log_likelihood(self, X):
+    def _compute_log_likelihood(self, X ,Y):
         """Computes per-component log probability under the model.
 
         Parameters
@@ -73,6 +74,8 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             Log probability of each sample in ``X`` for each of the
             model states.
         """
+
+
 
     def _generate_sample_from_state(self, state, random_state=None):
         """Generates a random sample from a given component.
