@@ -197,3 +197,27 @@ class GTR_model:
 
 
         return expected_clonal_ll, expected_recombination_ll
+#     =======================================================================================
+    def wholeAlignmentExpLL(self,tree, alignment, internl_node=-1, co_clonal=1, co_recom=1):
+
+        tips = len(alignment)
+        alignment_len = alignment.sequence_size
+
+        recom_vector = numpy.zeros((tips - 1, alignment_len))
+        clonal_vector = numpy.zeros((tips - 1, alignment_len))
+        column = []
+        for l in range(alignment_len):
+            col = ""
+            for t in range(tips):
+                col += str(alignment[t][l])
+            column.append(col)
+
+        uniqueCol = list(set(column))
+        for i in range(len(uniqueCol)):
+
+            indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
+            result = self.expectedLL(tree, uniqueCol[i], internl_node, co_clonal, co_recom)
+            clonal_vector[:, indexes] = result[0]
+            recom_vector[:, indexes] = result[1]
+
+        return clonal_vector, recom_vector
