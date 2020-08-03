@@ -63,13 +63,9 @@ class GTR_model:
         return p
 
     #     ========================================================================
-
-    def computelikelihood(self, tree, dna):
+    def set_index(self,tree,dna):
 
         tips = len(dna)
-
-        partial = numpy.zeros((2 * tips, 4))
-
         for node in tree.postorder_node_iter():
             node.index = -1
             node.annotations.add_bound_attribute("index")
@@ -84,6 +80,13 @@ class GTR_model:
                     if idx + 1 == int(node.taxon.label):
                         node.index = idx + 1
                         break
+    #=============================================================================
+    def computelikelihood(self, tree, dna):
+
+        tips = len(dna)
+        partial = numpy.zeros((2 * tips, 4))
+        self.set_index(tree,dna)
+
         pos = 0
         for node in tree.postorder_node_iter():
             if node.is_leaf():
@@ -96,8 +99,6 @@ class GTR_model:
                 for i in range(1, len(children)):
                     partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
                                                      partial[children[i].index])
-
-
 
         ll_partial = numpy.zeros(2* tips)
         for i in range(tree.seed_node.index, tips, -1):
@@ -141,25 +142,12 @@ class GTR_model:
 
         tips = len(dna)
 
-
         partial = numpy.zeros((2 * tips, 4))
         exp_clonal = numpy.zeros((2 * tips, 4))
         exp_recom = numpy.zeros((2 * tips, 4))
 
-        for node in tree.postorder_node_iter():
-            node.index = 0
-            node.annotations.add_bound_attribute("index")
+        self.set_index(tree,dna)
 
-        s = tips + 1
-        for id, node in enumerate(tree.postorder_node_iter()):
-            if not node.is_leaf():
-                node.index = s
-                s += 1
-            else:
-                for idx, name in enumerate(dna):
-                    if idx + 1 == int(node.taxon.label):
-                        node.index = idx + 1
-                        break
         pos = 0
         for node in tree.postorder_node_iter():
             if node.is_leaf():
@@ -182,10 +170,6 @@ class GTR_model:
                                                         exp_clonal[children[i].index])
                     exp_recom[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length * co_recom),
                                                        exp_recom[children[i].index])
-
-
-
-
 
         expected_clonal_ll = numpy.zeros(tips - 1)
         expected_recombination_ll = numpy.zeros(tips - 1)

@@ -15,12 +15,12 @@ test = GTR_model(rates,pi)
 res = test.computelikelihood(tree,'TTTT')
 
 print(res[0])
-print(res[1])
+# print(res[1])
 
-
-tmp = test.wholeAlignmentLikelihood(tree, alignment)
-print(tmp[0])
-print(tmp[1])
+#
+# tmp = test.wholeAlignmentLikelihood(tree, alignment)
+# print(tmp[0])
+# print(tmp[1])
 
 # res_exp = test.expectedLL(tree,'TTTT', 0.8, 1.2)
 #
