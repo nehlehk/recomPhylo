@@ -101,7 +101,7 @@ class GTR_model:
 
         ll_partial = numpy.zeros(2* tips)
         for i in range(tree.seed_node.index, tips, -1):
-            ll_partial[i] = round(numpy.log(numpy.sum(partial[i]) * 0.25), 7)
+            ll_partial[i] = round(numpy.log(numpy.mean(partial[i]) ), 7)
 
 
         persite_ll = ll_partial[tree.seed_node.index]
@@ -135,3 +135,65 @@ class GTR_model:
             LL_partial[indexes,:] = result[1]
 
         return LL_root , LL_partial
+
+    # ==============================================================================
+    def expectedLL(self,tree, dna, co_clonal, co_recom):
+
+        tips = len(dna)
+
+
+        partial = numpy.zeros((2 * tips, 4))
+        exp_clonal = numpy.zeros((2 * tips, 4))
+        exp_recom = numpy.zeros((2 * tips, 4))
+
+        for node in tree.postorder_node_iter():
+            node.index = 0
+            node.annotations.add_bound_attribute("index")
+
+        s = tips + 1
+        for id, node in enumerate(tree.postorder_node_iter()):
+            if not node.is_leaf():
+                node.index = s
+                s += 1
+            else:
+                for idx, name in enumerate(dna):
+                    if idx + 1 == int(node.taxon.label):
+                        node.index = idx + 1
+                        break
+        pos = 0
+        for node in tree.postorder_node_iter():
+            if node.is_leaf():
+                i = self.give_index(str(dna[pos]))
+                pos += 1
+                partial[node.index][i] = 1
+                exp_clonal[node.index][i] = 1
+                exp_recom[node.index][i] = 1
+            else:
+                children = node.child_nodes()
+                partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
+                exp_clonal[node.index] = numpy.dot(self.p_matrix(children[0].edge_length * co_clonal),
+                                                   partial[children[0].index])
+                exp_recom[node.index] = numpy.dot(self.p_matrix(children[0].edge_length * co_recom),
+                                                  partial[children[0].index])
+                for i in range(1, len(children)):
+                    partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
+                                                     partial[children[i].index])
+                    exp_clonal[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length * co_clonal),
+                                                        exp_clonal[children[i].index])
+                    exp_recom[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length * co_recom),
+                                                       exp_recom[children[i].index])
+
+
+
+
+
+        expected_clonal_ll = numpy.zeros(tips - 1)
+        expected_recombination_ll = numpy.zeros(tips - 1)
+        p_index = 0
+        for par in range(tips + 1, tree.seed_node.index + 1, 1):
+            expected_clonal_ll[p_index] = round(numpy.log(numpy.mean(exp_clonal[par])), 7)
+            expected_recombination_ll[p_index] = round(numpy.log(numpy.mean(exp_recom[par])), 7)
+            p_index += 1
+
+
+        return expected_clonal_ll, expected_recombination_ll
