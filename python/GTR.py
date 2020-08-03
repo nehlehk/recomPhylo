@@ -120,13 +120,8 @@ class GTR_model:
         alignment_len = alignment.sequence_size
         LL_root = numpy.zeros(alignment_len)
         LL_partial = numpy.zeros((alignment_len , 2*tips))
-        column = []
-        for l in range(alignment_len):
-            col = ""
-            for t in range(tips):
-                col += str(alignment[t][l])
-            column.append(col)
 
+        column = self.get_DNA_fromAlignment(alignment)
 
         uniqueCol = list(set(column))
         for i in range(len(uniqueCol)):
@@ -182,13 +177,10 @@ class GTR_model:
 
         return expected_clonal_ll, expected_recombination_ll
 #     =======================================================================================
-    def wholeAlignmentExpLL(self,tree, alignment, internl_node=-1, co_clonal=1, co_recom=1):
+    def get_DNA_fromAlignment(self,alignment):
 
-        tips = len(alignment)
         alignment_len = alignment.sequence_size
-
-        recom_vector = numpy.zeros((tips - 1, alignment_len))
-        clonal_vector = numpy.zeros((tips - 1, alignment_len))
+        tips = len(alignment)
         column = []
         for l in range(alignment_len):
             col = ""
@@ -196,6 +188,26 @@ class GTR_model:
                 col += str(alignment[t][l])
             column.append(col)
 
+        return column
+
+#     =======================================================================================
+
+    def wholeAlignmentExpLL(self,tree, alignment, internl_node=-1, co_clonal=1, co_recom=1):
+
+        tips = len(alignment)
+        alignment_len = alignment.sequence_size
+
+        recom_vector = numpy.zeros((tips - 1, alignment_len))
+        clonal_vector = numpy.zeros((tips - 1, alignment_len))
+
+        # column = []
+        # for l in range(alignment_len):
+        #     col = ""
+        #     for t in range(tips):
+        #         col += str(alignment[t][l])
+        #     column.append(col)
+
+        column = self.get_DNA_fromAlignment(alignment)
         uniqueCol = list(set(column))
         for i in range(len(uniqueCol)):
 

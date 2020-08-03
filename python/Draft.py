@@ -12,9 +12,11 @@ rates = [2.0431,0.0821,0,0.067,0]
 
 test = GTR_model(rates,pi)
 
-res = test.computelikelihood(tree,'TTTT')
+# print(test.get_DNA_fromAlignment(alignment))
 
-print(res[0])
+# res = test.computelikelihood(tree,'TTTT')
+#
+# print(res[0])
 # print(res[1])
 
 #
