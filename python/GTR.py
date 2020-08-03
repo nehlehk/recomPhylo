@@ -7,7 +7,7 @@ class GTR_model:
         self.rates = rates
         self.pi = pi
 
-
+    #     ========================================================================
     def give_index(self,c):
         if c == "A":
             return 0
@@ -17,6 +17,7 @@ class GTR_model:
             return 2
         elif c == "T":
             return 3
+    #     ========================================================================
 
     def p_matrix(self , br_length):
         p = numpy.zeros((4, 4))
@@ -61,6 +62,7 @@ class GTR_model:
 
         return p
 
+    #     ========================================================================
 
     def computelikelihood(self, tree, dna):
 
@@ -96,8 +98,40 @@ class GTR_model:
                                                      partial[children[i].index])
 
 
-        temp = 0
-        temp = numpy.sum(partial[tree.seed_node.index]) * 0.25
-        ll = round(numpy.log(temp), 7)
 
-        return ll
+        ll_partial = numpy.zeros(2* tips)
+        for i in range(tree.seed_node.index, tips, -1):
+            ll_partial[i] = round(numpy.log(numpy.sum(partial[i]) * 0.25), 7)
+
+
+        persite_ll = ll_partial[tree.seed_node.index]
+
+        return persite_ll, ll_partial
+
+    #     ========================================================================
+    def wholeAlignmentLikelihood(self, tree, alignment):
+        '''
+        :param tree:
+        :param alignment:
+        :return: persite likelihood and partial likelihood for each site
+        '''
+        tips = len(alignment)
+        alignment_len = alignment.sequence_size
+        LL_root = numpy.zeros(alignment_len)
+        LL_partial = numpy.zeros((alignment_len , 2*tips))
+        column = []
+        for l in range(alignment_len):
+            col = ""
+            for t in range(tips):
+                col += str(alignment[t][l])
+            column.append(col)
+
+
+        uniqueCol = list(set(column))
+        for i in range(len(uniqueCol)):
+            indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
+            result = self.computelikelihood(tree, uniqueCol[i])
+            LL_root[indexes] = result[0]
+            LL_partial[indexes,:] = result[1]
+
+        return LL_root , LL_partial
