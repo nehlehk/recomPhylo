@@ -1,19 +1,14 @@
-from dendropy import Tree, DnaCharacterMatrix
 import numpy
-import math
-import dendropy
 import numpy.linalg as la
 
 
-class GTR:
-
+class GTR_model:
     def __init__(self, rates, pi):
         self.rates = rates
         self.pi = pi
 
 
-
-    def give_index(c):
+    def give_index(self,c):
         if c == "A":
             return 0
         elif c == "C":
@@ -22,9 +17,6 @@ class GTR:
             return 2
         elif c == "T":
             return 3
-
-
-
 
     def p_matrix(self , br_length):
         p = numpy.zeros((4, 4))
@@ -70,8 +62,6 @@ class GTR:
         return p
 
 
-
-
     def computelikelihood(self, tree, dna):
 
         tips = len(dna)
@@ -97,7 +87,6 @@ class GTR:
             if node.is_leaf():
                 i = self.give_index(str(dna[pos]))
                 pos += 1
-                # i = give_index(dna[node.index-1])
                 partial[node.index][i] = 1
             else:
                 children = node.child_nodes()
@@ -107,8 +96,8 @@ class GTR:
                                                      partial[children[i].index])
 
 
-            temp = 0
-            temp = numpy.sum(partial[tree.seed_node.index]) * 0.25
-            ll = round(numpy.log(temp), 7)
+        temp = 0
+        temp = numpy.sum(partial[tree.seed_node.index]) * 0.25
+        ll = round(numpy.log(temp), 7)
 
         return ll
