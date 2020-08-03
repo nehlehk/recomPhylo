@@ -200,13 +200,6 @@ class GTR_model:
         recom_vector = numpy.zeros((tips - 1, alignment_len))
         clonal_vector = numpy.zeros((tips - 1, alignment_len))
 
-        # column = []
-        # for l in range(alignment_len):
-        #     col = ""
-        #     for t in range(tips):
-        #         col += str(alignment[t][l])
-        #     column.append(col)
-
         column = self.get_DNA_fromAlignment(alignment)
         uniqueCol = list(set(column))
         for i in range(len(uniqueCol)):
