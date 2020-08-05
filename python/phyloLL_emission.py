@@ -2,7 +2,8 @@ import hmmlearn.base
 import numpy as np
 import logging
 import hmmlearn._utils
-import GTR
+import myPhylo
+from scipy.integrate import quad
 
 
 
@@ -74,6 +75,11 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             Log probability of each sample in ``X`` for each of the
             model states.
         """
+        a = X
+        b = Y
+        phyloLL = myPhylo.GTR_model.computelikelihood()
+        pdf, err = quad(phyloLL[0], a, b)
+        return  pdf
 
 
 

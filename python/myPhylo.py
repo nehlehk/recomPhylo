@@ -67,7 +67,7 @@ class GTR_model:
 
         tips = len(dna)
         for node in tree.postorder_node_iter():
-            node.index = -1
+            node.index = 0
             node.annotations.add_bound_attribute("index")
 
         s = tips + 1
@@ -100,6 +100,13 @@ class GTR_model:
                     partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
                                                      partial[children[i].index])
 
+
+
+
+        print(numpy.sum(partial[0]))
+        print(numpy.sum(partial[1]))
+        print(numpy.sum(partial[2]))
+        print(numpy.log(numpy.mean(partial[3])))
         ll_partial = numpy.zeros(2* tips)
         for i in range(tree.seed_node.index, tips, -1):
             ll_partial[i] = round(numpy.log(numpy.mean(partial[i]) ), 7)
@@ -210,3 +217,8 @@ class GTR_model:
             recom_vector[indexes, : ] = result[1]
 
         return clonal_vector, recom_vector
+
+#     =======================================================================================
+
+
+
