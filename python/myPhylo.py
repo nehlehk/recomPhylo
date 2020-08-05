@@ -125,28 +125,26 @@ class GTR_model:
             if node.is_leaf():
                 i = self.give_index(str(dna[pos]))
                 pos += 1
-                partial[node.index][i] = 1
-            if not node.is_leaf():
+                partial[node.index][i] = 1 * node.edge.length
+            else:
                 # print(node.index)
                 children = node.child_nodes()
-                for child in children:
-                    # partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
-                    partial[child.index] =  partial[child.index] * child.edge.length
-                    # print(child.index)
-                    # print(child.edge.length)
-
-        print(partial)
+                partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
+                for i in range(1, len(children)):
+                    partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
+                                                     partial[children[i].index])
 
 
+        # print(partial)
 
+        ll_partial = numpy.zeros(2)
+        for node in tree.preorder_node_iter():
+            if node.parent_node is None:
+                children = node.child_nodes()
+                for i in range(0, len(children)):
+                    # print(children[i].index)
+                    ll_partial[i] = round(numpy.log(numpy.mean(partial[children[i].index])), 7)
 
-
-
-        ll_partial = numpy.zeros(tips)
-        # for node in tree.preorder_node_iter():
-        #     if not node.parent_node is None:
-        #         ll_partial[node.index] = round(numpy.log(numpy.mean(partial[node.index])), 7)
-        #
         # print(ll_partial)
         return ll_partial
 

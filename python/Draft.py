@@ -4,7 +4,7 @@ import myPhylo
 import numpy as np
 
 
-tree = Tree.get_from_path('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_3taxa.tree', 'newick')
+tree = Tree.get_from_path('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_4taxa.tree', 'newick')
 tree2 = Tree.get_from_path('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_2taxa2.tree', 'newick')
 tree3 = Tree.get_from_path('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_2taxa3.tree', 'newick')
 alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/sample_2taxa.fasta"), schema="fasta")
@@ -22,7 +22,9 @@ two_taxa = myPhylo.GTR_model(rates,pi)
 #
 # two_taxa.set_index(tree,c[0])
 
-two_taxa.partial_likelihoods_to_target_node(tree,'AAA')
+node_partial=two_taxa.partial_likelihoods_to_target_node(tree,'AAAA')
+
+print(node_partial)
 
 
 
