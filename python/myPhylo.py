@@ -104,14 +104,6 @@ class GTR_model:
                                                      partial[children[i].index])
 
 
-
-
-
-        # print(numpy.sum(partial[0]))
-        # print(numpy.sum(partial[1]))
-        # print(numpy.sum(partial[2]))
-        # print(numpy.sum(partial[3]))
-        # print(partial)
         ll_partial = numpy.zeros(2* tips)
         for i in range(tree.seed_node.index, tips, -1):
             ll_partial[i] = round(numpy.log(numpy.mean(partial[i]) ), 7)
@@ -129,12 +121,26 @@ class GTR_model:
         self.set_index(tree, dna)
 
         pos = 0
-        for node in tree.preorder_node_iter():
-            if not node.parent_node is None:
-                print(node.index)
-                # i = self.give_index(str(dna[pos]))
-                # pos += 1
-                # partial[node.index][i] = 1 * node.edge.length
+        for node in tree.postorder_node_iter():
+            if node.is_leaf():
+                i = self.give_index(str(dna[pos]))
+                pos += 1
+                partial[node.index][i] = 1
+            if not node.is_leaf():
+                # print(node.index)
+                children = node.child_nodes()
+                for child in children:
+                    # partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
+                    partial[child.index] =  partial[child.index] * child.edge.length
+                    # print(child.index)
+                    # print(child.edge.length)
+
+        print(partial)
+
+
+
+
+
 
         ll_partial = numpy.zeros(tips)
         # for node in tree.preorder_node_iter():
