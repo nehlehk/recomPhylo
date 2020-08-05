@@ -103,10 +103,12 @@ class GTR_model:
 
 
 
-        print(numpy.sum(partial[0]))
-        print(numpy.sum(partial[1]))
-        print(numpy.sum(partial[2]))
-        print(numpy.log(numpy.mean(partial[3])))
+
+        # print(numpy.sum(partial[0]))
+        # print(numpy.sum(partial[1]))
+        # print(numpy.sum(partial[2]))
+        # print(numpy.sum(partial[3]))
+        # print(partial)
         ll_partial = numpy.zeros(2* tips)
         for i in range(tree.seed_node.index, tips, -1):
             ll_partial[i] = round(numpy.log(numpy.mean(partial[i]) ), 7)
@@ -117,6 +119,31 @@ class GTR_model:
         return persite_ll, ll_partial
 
     #     ========================================================================
+    def partial_likelihoods_to_target_node(self,tree,dna):
+
+        tips = len(dna)
+        partial = numpy.zeros((2 * tips, 4))
+        self.set_index(tree, dna)
+
+        pos = 0
+        for node in tree.preorder_node_iter():
+            if not node.parent_node is None:
+                i = self.give_index(str(dna[pos]))
+                pos += 1
+                partial[node.index][i] = 1 * node.edge.length
+
+        ll_partial = numpy.zeros(tips)
+        for node in tree.preorder_node_iter():
+            if not node.parent_node is None:
+                ll_partial[node.index] = round(numpy.log(numpy.mean(partial[node.index])), 7)
+
+        print(ll_partial)
+        return ll_partial
+
+
+
+
+
     def wholeAlignmentLikelihood(self, tree, alignment):
         '''
         :param tree:
