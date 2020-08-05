@@ -70,7 +70,7 @@ class GTR_model:
             node.index = 0
             node.annotations.add_bound_attribute("index")
 
-        s = tips + 1
+        s = tips
         for id, node in enumerate(tree.postorder_node_iter()):
             if not node.is_leaf():
                 node.index = s
@@ -80,6 +80,9 @@ class GTR_model:
                     if idx + 1 == int(node.taxon.label):
                         node.index = idx + 1
                         break
+
+        # for node in tree.postorder_node_iter():
+        #     print(node.index)
     #=============================================================================
     def computelikelihood(self, tree, dna):
 
@@ -128,16 +131,17 @@ class GTR_model:
         pos = 0
         for node in tree.preorder_node_iter():
             if not node.parent_node is None:
-                i = self.give_index(str(dna[pos]))
-                pos += 1
-                partial[node.index][i] = 1 * node.edge.length
+                print(node.index)
+                # i = self.give_index(str(dna[pos]))
+                # pos += 1
+                # partial[node.index][i] = 1 * node.edge.length
 
         ll_partial = numpy.zeros(tips)
-        for node in tree.preorder_node_iter():
-            if not node.parent_node is None:
-                ll_partial[node.index] = round(numpy.log(numpy.mean(partial[node.index])), 7)
-
-        print(ll_partial)
+        # for node in tree.preorder_node_iter():
+        #     if not node.parent_node is None:
+        #         ll_partial[node.index] = round(numpy.log(numpy.mean(partial[node.index])), 7)
+        #
+        # print(ll_partial)
         return ll_partial
 
 
