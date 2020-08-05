@@ -148,9 +148,7 @@ class GTR_model:
         # print(ll_partial)
         return ll_partial
 
-
-
-
+    #     ========================================================================
 
     def wholeAlignmentLikelihood(self, tree, alignment):
         '''

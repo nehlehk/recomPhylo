@@ -27,6 +27,24 @@ node_partial=two_taxa.partial_likelihoods_to_target_node(tree,'AAAA')
 print(node_partial)
 
 
+def make_recombination_tree(tree ,co_recom):
+        # for edge in tree.postorder_edge_iter():
+        #     if edge.length is None:
+        #         edge.length = 0
+        #     print(edge.length)
+        #     edge.length = float(edge.length) * co_recom
+        #     print(edge.length)
+        #     print(tree.as_string(schema="newick"))
+
+        for node in tree.postorder_node_iter():
+            if node.edge.length is None:
+                node.edge.length = 0
+            print(node.edge.length)
+            node.edge.length = node.edge.length * co_recom
+            print(tree.as_string(schema="newick"))
+
+make_recombination_tree(tree ,2)
+
 
 
 
