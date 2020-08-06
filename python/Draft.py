@@ -22,28 +22,29 @@ two_taxa = myPhylo.GTR_model(rates,pi)
 #
 # two_taxa.set_index(tree,c[0])
 
-node_partial=two_taxa.partial_likelihoods_to_target_node(tree,'AAAA')
-
-print(node_partial)
+# node_partial=two_taxa.partial_likelihoods_to_target_node(tree,'AAAA')
+#
+# print(node_partial)
 
 
 def make_recombination_tree(tree ,co_recom):
-        # for edge in tree.postorder_edge_iter():
-        #     if edge.length is None:
-        #         edge.length = 0
-        #     print(edge.length)
-        #     edge.length = float(edge.length) * co_recom
-        #     print(edge.length)
-        #     print(tree.as_string(schema="newick"))
-
+        recombination_trees = []
         for node in tree.postorder_node_iter():
             if node.edge.length is None:
                 node.edge.length = 0
-            print(node.edge.length)
-            node.edge.length = node.edge.length * co_recom
-            print(tree.as_string(schema="newick"))
+            # print(node.edge.length)
+            if node.edge.length > 0:
+                node.edge.length = node.edge.length * co_recom
+                recombination_trees.append(tree.as_string(schema="newick"))
+                node.edge.length = node.edge.length * 1/co_recom
 
-make_recombination_tree(tree ,2)
+        return recombination_trees
+
+
+
+
+recom = myPhylo.make_recombination_trees(tree3 ,8)
+print(recom[1])
 
 
 
