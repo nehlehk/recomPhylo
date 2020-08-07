@@ -252,8 +252,10 @@ class GTR_model:
         return clonal_vector, recom_vector
 
 #     =======================================================================================
+
 def make_recombination_trees(tree, co_recom):
     recombination_trees = []
+    recombination_trees.append(tree.as_string(schema="newick"))
     for node in tree.postorder_node_iter():
         if node.edge.length is None:
             node.edge.length = 0
