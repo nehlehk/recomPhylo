@@ -24,7 +24,6 @@ def make_hmm_input(tree,alignment,model,params):
         taxon = tree.taxon_namespace
         mrca = pdm.mrca(taxon[params[0]], taxon[params[1]])
         tree.reroot_at_node(mrca, update_bipartitions=False)
-        DNAs = myPhylo.get_DNA_fromAlignment(alignment)
         sitell , partial =myPhylo.wholeAlignmentLikelihood(tree,alignment, model)
         children = tree.seed_node.child_nodes()
         children_count = len(children)
@@ -34,11 +33,34 @@ def make_hmm_input(tree,alignment,model,params):
         return x
 
 
-x = make_hmm_input(tree,alignment,GTR_sample,[0,2])
-print(x)
-print(x.shape)
+# x = make_hmm_input(tree,alignment,GTR_sample,[0,7])
+# print(x)
+# print(x.shape)
 
 
+
+def make_recombination_trees(tree,alignment,co_recom ,params):
+    myPhylo.set_index(tree,alignment)
+    recombination_trees = []
+    recombination_trees.append(tree.as_string(schema="newick"))
+    pdm = tree.phylogenetic_distance_matrix()
+    taxon = tree.taxon_namespace
+    mrca = pdm.mrca(taxon[params[0]], taxon[params[1]])
+    tree.reroot_at_node(mrca, update_bipartitions=False)
+    for node in tree.postorder_node_iter():
+        if node.edge.length is None:
+            node.edge.length = 0
+        # print(node.edge.length)
+        if (node.edge.length > 0) :
+            node.edge.length = node.edge.length * co_recom
+            recombination_trees.append(tree.as_string(schema="newick"))
+            node.edge.length = node.edge.length * (1 / co_recom)
+
+    return recombination_trees
+
+
+recom_trees = make_recombination_trees(tree,alignment,5,[0,2])
+print(recom_trees)
 
 
 
