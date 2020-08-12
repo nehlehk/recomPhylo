@@ -8,17 +8,6 @@ class GTR_model:
         self.pi = pi
 
     #     ========================================================================
-    def give_index(self,c):
-        if c == "A":
-            return 0
-        elif c == "C":
-            return 1
-        elif c == "G":
-            return 2
-        elif c == "T":
-            return 3
-    #     ========================================================================
-
     def p_matrix(self , br_length):
         p = numpy.zeros((4, 4))
 
@@ -61,199 +50,210 @@ class GTR_model:
         p = numpy.dot(left, numpy.dot(numpy.diag(numpy.exp(eigval * br_length)), right))
 
         return p
-
-    #     ========================================================================
-    def set_index(self,tree,dna):
-
-        tips = len(dna)
-        for node in tree.postorder_node_iter():
-            node.index = 0
-            node.annotations.add_bound_attribute("index")
-
-        s = tips
-        for id, node in enumerate(tree.postorder_node_iter()):
-            if not node.is_leaf():
-                node.index = s
-                s += 1
-            else:
-                for idx, name in enumerate(dna):
-                    if idx + 1 == int(node.taxon.label):
-                        node.index = idx + 1
-                        break
-
-        # for node in tree.postorder_node_iter():
-        #     print(node.index)
     #=============================================================================
-    def computelikelihood(self, tree, dna):
+def computelikelihood(tree, dna , model):
 
-        tips = len(dna)
-        partial = numpy.zeros((2 * tips, 4))
-        self.set_index(tree,dna)
+    tips = len(dna)
+    partial = numpy.zeros(((2 * tips) -1, 4))
+    set_index(tree,dna)
 
-        pos = 0
-        for node in tree.postorder_node_iter():
-            if node.is_leaf():
-                i = self.give_index(str(dna[pos]))
-                pos += 1
-                partial[node.index][i] = 1
-            else:
-                children = node.child_nodes()
-                partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
-                for i in range(1, len(children)):
-                    partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
-                                                     partial[children[i].index])
-
-
-        ll_partial = numpy.zeros(2* tips)
-        for i in range(tree.seed_node.index, tips, -1):
-            ll_partial[i] = round(numpy.log(numpy.mean(partial[i]) ), 7)
+    pos = 0
+    for node in tree.postorder_node_iter():
+        if node.is_leaf():
+            i = give_index(str(dna[pos]))
+            pos += 1
+            partial[node.index][i] = 1
+        else:
+            # print("node.index: ",node.index)
+            children = node.child_nodes()
+            # print("child index:" ,children[0].index , "  edge_length0 : ",children[0].edge_length)
+            partial[node.index] = numpy.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
+            for i in range(1, len(children)):
+                # print("child index:" ,children[i].index , "edge_length  : ", children[i].edge_length)
+                partial[node.index] *= numpy.dot(model.p_matrix(children[i].edge_length),
+                                                 partial[children[i].index])
 
 
-        persite_ll = ll_partial[tree.seed_node.index]
 
-        return persite_ll, ll_partial
+    # print(partial)
+    # ll_partial = numpy.zeros(2* tips)
+    # for i in range(tree.seed_node.index, tips -1, -1):
+    #     ll_partial[i] = round(numpy.log(numpy.mean(partial[i]) ), 7)
+    #
+    #
+    # persite_ll = ll_partial[tree.seed_node.index]
+    persite_ll = round(numpy.log(numpy.mean(partial[tree.seed_node.index]) ), 7)
 
-    #     ========================================================================
-    def partial_likelihoods_to_target_node(self,tree,dna):
+    return persite_ll, partial
 
-        tips = len(dna)
-        partial = numpy.zeros((2 * tips, 4))
-        self.set_index(tree, dna)
+#     ========================================================================
+def partial_likelihoods_to_target_node(tree,dna,model):
 
-        pos = 0
-        for node in tree.postorder_node_iter():
-            if node.is_leaf():
-                i = self.give_index(str(dna[pos]))
-                pos += 1
-                partial[node.index][i] = 1 * node.edge.length
-            else:
-                # print(node.index)
-                children = node.child_nodes()
-                partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
-                for i in range(1, len(children)):
-                    partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
-                                                     partial[children[i].index])
+    tips = len(dna)
+    partial = numpy.zeros((2 * tips, 4))
+    set_index(tree, dna)
 
-
-        # print(partial)
-
-        ll_partial = numpy.zeros(2)
-        for node in tree.preorder_node_iter():
-            if node.parent_node is None:
-                children = node.child_nodes()
-                for i in range(0, len(children)):
-                    # print(children[i].index)
-                    ll_partial[i] = round(numpy.log(numpy.mean(partial[children[i].index])), 7)
-
-        # print(ll_partial)
-        return ll_partial
-
-    #     ========================================================================
-
-    def wholeAlignmentLikelihood(self, tree, alignment):
-        '''
-        :param tree:
-        :param alignment:
-        :return: persite likelihood and partial likelihood for each site
-        '''
-        tips = len(alignment)
-        alignment_len = alignment.sequence_size
-        LL_root = numpy.zeros(alignment_len)
-        LL_partial = numpy.zeros((alignment_len , 2*tips))
-
-        column = self.get_DNA_fromAlignment(alignment)
-
-        uniqueCol = list(set(column))
-        for i in range(len(uniqueCol)):
-            indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
-            result = self.computelikelihood(tree, uniqueCol[i])
-            LL_root[indexes] = result[0]
-            LL_partial[indexes,:] = result[1]
-
-        return LL_root , LL_partial
-
-    # ==============================================================================
-    def expectedLL(self,tree, dna, co_clonal, co_recom):
-
-        tips = len(dna)
-
-        partial = numpy.zeros((2 * tips, 4))
-        exp_clonal = numpy.zeros((2 * tips, 4))
-        exp_recom = numpy.zeros((2 * tips, 4))
-
-        self.set_index(tree,dna)
-
-        pos = 0
-        for node in tree.postorder_node_iter():
-            if node.is_leaf():
-                i = self.give_index(str(dna[pos]))
-                pos += 1
-                partial[node.index][i] = 1
-                exp_clonal[node.index][i] = 1
-                exp_recom[node.index][i] = 1
-            else:
-                children = node.child_nodes()
-                partial[node.index] = numpy.dot(self.p_matrix(children[0].edge_length), partial[children[0].index])
-                exp_clonal[node.index] = numpy.dot(self.p_matrix(children[0].edge_length * co_clonal),
-                                                   partial[children[0].index])
-                exp_recom[node.index] = numpy.dot(self.p_matrix(children[0].edge_length * co_recom),
-                                                  partial[children[0].index])
-                for i in range(1, len(children)):
-                    partial[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length),
-                                                     partial[children[i].index])
-                    exp_clonal[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length * co_clonal),
-                                                        exp_clonal[children[i].index])
-                    exp_recom[node.index] *= numpy.dot(self.p_matrix(children[i].edge_length * co_recom),
-                                                       exp_recom[children[i].index])
-
-        expected_clonal_ll = numpy.zeros(tips - 1)
-        expected_recombination_ll = numpy.zeros(tips - 1)
-        p_index = 0
-        for par in range(tips + 1, tree.seed_node.index + 1, 1):
-            expected_clonal_ll[p_index] = round(numpy.log(numpy.mean(exp_clonal[par])), 7)
-            expected_recombination_ll[p_index] = round(numpy.log(numpy.mean(exp_recom[par])), 7)
-            p_index += 1
+    pos = 0
+    for node in tree.postorder_node_iter():
+        if node.is_leaf():
+            i = give_index(str(dna[pos]))
+            pos += 1
+            partial[node.index][i] = 1 * node.edge.length
+        else:
+            # print(node.index)
+            children = node.child_nodes()
+            partial[node.index] = numpy.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
+            for i in range(1, len(children)):
+                partial[node.index] *= numpy.dot(model.p_matrix(children[i].edge_length),
+                                                 partial[children[i].index])
 
 
-        return expected_clonal_ll, expected_recombination_ll
+
+    for i in range(partial.shape[0]):
+        print(numpy.mean(partial[i,]))
+
+    ll_partial = numpy.zeros(2)
+    for node in tree.preorder_node_iter():
+        if node.parent_node is None:
+            children = node.child_nodes()
+            for i in range(0, len(children)):
+                # print(children[i].index)
+                ll_partial[i] = round(numpy.log(numpy.mean(partial[children[i].index])), 7)
+
+    # print(ll_partial)
+    return ll_partial
+
+#     ========================================================================
+def expectedLL(tree, dna, co_clonal, co_recom, model):
+
+    tips = len(dna)
+
+    partial = numpy.zeros((2 * tips, 4))
+    exp_clonal = numpy.zeros((2 * tips, 4))
+    exp_recom = numpy.zeros((2 * tips, 4))
+
+    set_index(tree,dna)
+
+    pos = 0
+    for node in tree.postorder_node_iter():
+        if node.is_leaf():
+            i = give_index(str(dna[pos]))
+            pos += 1
+            partial[node.index][i] = 1
+            exp_clonal[node.index][i] = 1
+            exp_recom[node.index][i] = 1
+        else:
+            children = node.child_nodes()
+            partial[node.index] = numpy.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
+            exp_clonal[node.index] = numpy.dot(model.p_matrix(children[0].edge_length * co_clonal),
+                                               partial[children[0].index])
+            exp_recom[node.index] = numpy.dot(model.p_matrix(children[0].edge_length * co_recom),
+                                              partial[children[0].index])
+            for i in range(1, len(children)):
+                partial[node.index] *= numpy.dot(model.p_matrix(children[i].edge_length),
+                                                 partial[children[i].index])
+                exp_clonal[node.index] *= numpy.dot(model.p_matrix(children[i].edge_length * co_clonal),
+                                                    exp_clonal[children[i].index])
+                exp_recom[node.index] *= numpy.dot(model.p_matrix(children[i].edge_length * co_recom),
+                                                   exp_recom[children[i].index])
+
+    expected_clonal_ll = numpy.zeros(tips - 1)
+    expected_recombination_ll = numpy.zeros(tips - 1)
+    p_index = 0
+    for par in range(tips + 1, tree.seed_node.index + 1, 1):
+        expected_clonal_ll[p_index] = round(numpy.log(numpy.mean(exp_clonal[par])), 7)
+        expected_recombination_ll[p_index] = round(numpy.log(numpy.mean(exp_recom[par])), 7)
+        p_index += 1
+
+
+    return expected_clonal_ll, expected_recombination_ll
 #     =======================================================================================
-    def get_DNA_fromAlignment(self,alignment):
+def wholeAlignmentExpLL(tree, alignment, internl_node=-1, co_clonal=1, co_recom=1):
 
-        alignment_len = alignment.sequence_size
-        tips = len(alignment)
-        column = []
-        for l in range(alignment_len):
-            col = ""
-            for t in range(tips):
-                col += str(alignment[t][l])
-            column.append(col)
+    tips = len(alignment)
+    alignment_len = alignment.sequence_size
 
-        return column
+    clonal_vector = numpy.zeros((alignment_len, tips -1))
+    recom_vector = numpy.zeros((alignment_len, tips -1))
+
+    column = get_DNA_fromAlignment(alignment)
+
+    uniqueCol = list(set(column))
+    for i in range(len(uniqueCol)):
+        indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
+        result = expectedLL(tree, uniqueCol[i], co_clonal, co_recom)
+        clonal_vector[indexes, : ] = result[0]
+        recom_vector[indexes, : ] = result[1]
+
+    return clonal_vector, recom_vector
+#     =======================================================================================
+def give_index(c):
+    if c == "A":
+        return 0
+    elif c == "C":
+        return 1
+    elif c == "G":
+        return 2
+    elif c == "T":
+        return 3
+#     ========================================================================
+def set_index(tree,dna):
+    tips = len(dna)
+    for node in tree.postorder_node_iter():
+        node.index = 0
+        node.annotations.add_bound_attribute("index")
+
+    s = tips
+    for id, node in enumerate(tree.postorder_node_iter()):
+        if not node.is_leaf():
+            node.index = s
+            s += 1
+        else:
+            for idx, name in enumerate(dna):
+                if idx + 1 == int(node.taxon.label):
+                    node.index = idx + 1
+                    break
+
+    # for node in tree.postorder_node_iter():
+    #     print(node.index)
+#     =======================================================================================
+def get_DNA_fromAlignment(alignment):
+
+    alignment_len = alignment.sequence_size
+    tips = len(alignment)
+    column = []
+    for l in range(alignment_len):
+        col = ""
+        for t in range(tips):
+            col += str(alignment[t][l])
+        column.append(col)
+
+    return column
+#     =======================================================================================
+def wholeAlignmentLikelihood(tree, alignment , model):
+    '''
+    :param tree:
+    :param alignment:
+    :return: persite likelihood and partial likelihood for each site
+    '''
+    tips = len(alignment)
+    alignment_len = alignment.sequence_size
+    LL_root = numpy.zeros(alignment_len)
+    LL_partial = numpy.zeros(((alignment_len , (2*tips)-1 , 4)))
+
+    column = get_DNA_fromAlignment(alignment)
+
+    uniqueCol = list(set(column))
+    for i in range(len(uniqueCol)):
+        indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
+        result = computelikelihood(tree, uniqueCol[i] , model)
+        LL_root[indexes] = result[0]
+        LL_partial[indexes,:] = result[1]
+
+    return LL_root , LL_partial
 
 #     =======================================================================================
-
-    def wholeAlignmentExpLL(self,tree, alignment, internl_node=-1, co_clonal=1, co_recom=1):
-
-        tips = len(alignment)
-        alignment_len = alignment.sequence_size
-
-        clonal_vector = numpy.zeros((alignment_len, tips -1))
-        recom_vector = numpy.zeros((alignment_len, tips -1))
-
-        column = self.get_DNA_fromAlignment(alignment)
-
-        uniqueCol = list(set(column))
-        for i in range(len(uniqueCol)):
-            indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
-            result = self.expectedLL(tree, uniqueCol[i], co_clonal, co_recom)
-            clonal_vector[indexes, : ] = result[0]
-            recom_vector[indexes, : ] = result[1]
-
-        return clonal_vector, recom_vector
-
-#     =======================================================================================
-
-def make_recombination_trees(tree, co_recom):
+def make_recombination_trees1(tree, co_recom):
     recombination_trees = []
     recombination_trees.append(tree.as_string(schema="newick"))
     for node in tree.postorder_node_iter():
@@ -264,6 +264,22 @@ def make_recombination_trees(tree, co_recom):
             node.edge.length = node.edge.length * co_recom
             recombination_trees.append(tree.as_string(schema="newick"))
             node.edge.length = node.edge.length * 1 / co_recom
+
+    return recombination_trees
+
+#     =======================================================================================
+def make_recombination_trees(tree, dna,targetnode,co_recom):
+    set_index(tree,dna)
+    recombination_trees = []
+    recombination_trees.append(tree.as_string(schema="newick"))
+    for node in tree.postorder_node_iter():
+        if node.edge.length is None:
+            node.edge.length = 0
+        # print(node.edge.length)
+        if (node.edge.length > 0) and not(node.parent_node.index == targetnode)  :
+            node.edge.length = node.edge.length * co_recom
+            recombination_trees.append(tree.as_string(schema="newick"))
+            node.edge.length = node.edge.length * (1 / co_recom)
 
     return recombination_trees
 
