@@ -197,9 +197,9 @@ def give_index(c):
     elif c == "T":
         return 3
 #     ========================================================================
-def set_index(tree,alignment):
-    result = get_DNA_fromAlignment(alignment)
-    dna = result[0]
+def set_index(tree,dna):
+    # result = get_DNA_fromAlignment(alignment)
+    # dna = result[0]
     tips = len(dna)
     for node in tree.postorder_node_iter():
         node.index = 0
@@ -220,7 +220,6 @@ def set_index(tree,alignment):
     #     print(node.index)
 #     =======================================================================================
 def get_DNA_fromAlignment(alignment):
-
     alignment_len = alignment.sequence_size
     tips = len(alignment)
     column = []
