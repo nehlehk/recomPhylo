@@ -2,6 +2,7 @@ import numpy as np
 from hmmlearn import hmm
 import matplotlib.pyplot as plt
 import pandas as pd
+import phyloLL_emission
 
 
 
@@ -9,7 +10,7 @@ df1 = pd.read_csv("/home/nehleh/PhyloCode/Data/RAxML_perSiteLLs_exampledatset", 
 ll = df1.to_numpy()
 data = np.array(ll)
 X = data.reshape((-1,1))
-X = X[1:1000000]
+X = X[0:1000000]
 
 mean = np.mean(X)
 std = np.std(X)
@@ -24,6 +25,21 @@ bstd= .001
 
 
 
+model = phyloLL_emission.phyloLL_HMM(n_components=2 ,algorithm='viterbi')
+model.startprob_ = np.array([0.98, 0.02])
+model.transmat_ = np.array([[0.9999, 0.0001] , [0.0001, 0.9999]])
+
+# print("model._compute_log_likelihood(X):::::")
+# print(model._compute_log_likelihood(X))
+#
+# posterior = model.predict_proba(X)
+# print("posterior::::::")
+# print(posterior)
+#
+# hiddenStates = model.predict(X)
+# print(hiddenStates)
+
+
 model = hmm.GaussianHMM(n_components=2, covariance_type="full" ,algorithm='viterbi' )
 # model.startprob_ = np.array([0.88, 0.12])
 model.startprob_ = np.array([0.98, 0.02])
@@ -31,17 +47,16 @@ model.transmat_ = np.array([[0.9999, 0.0001] , [0.0001, 0.9999]])
 model.means_ = np.array([[a, astd], [b, bstd]])
 model.covars_ = np.tile(np.identity(2), (2, 1, 1))
 
+print("model._compute_log_likelihood(X):::::")
+print(model._compute_log_likelihood(X))
 
 posterior = model.predict_proba(X)
-# print(posterior)
-print(posterior[54150:54200])
-print("------------------------------------------")
-print(posterior[56980:57050])
-print("------------------------------------------")
-print(posterior[71000:71100])
+print("posterior::::::")
+print(posterior)
+
 
 hiddenStates = model.predict(X)
-# print(hiddenStates)
+print(hiddenStates)
 
 score = model.score(X)
 
@@ -69,7 +84,7 @@ plt.show()
 
 
 
-# newmodel =  hmm.GaussianHMM(n_components=2 ,covariance_type="full",params = 'st').fit(X)
+# newmodel =  hmm.GaussianHMM(n_components= 4  ,covariance_type="full").fit(X)
 # newmodel.startprob_ = np.array([0.88, 0.12])
 # newmodel.transmat_ = np.array([[0.9999, 0.0001] , [0.0001, 0.9999]])
 # print(newmodel)
@@ -81,8 +96,13 @@ plt.show()
 #
 # print(newmodel.startprob_)
 # print(newmodel.transmat_)
-#
-#
+
+
+# tmp = newmodel._compute_log_likelihood(X)
+# print(tmp.shape)
+# print(tmp)
+
+
 # posterior = newmodel.predict_proba(X)
 # hiddenStates = newmodel.predict(X)
 # score = newmodel.score(X)

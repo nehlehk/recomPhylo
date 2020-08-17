@@ -3,7 +3,7 @@ import numpy as np
 import logging
 import hmmlearn._utils
 import myPhylo
-from scipy.integrate import quad
+
 
 
 
@@ -12,7 +12,7 @@ _log = logging.getLogger(__name__)
 
 class phyloLL_HMM(hmmlearn.base._BaseHMM):
 
-    def _init(self, X , Y, lengths):
+    def _init(self, X , lengths):
         """Initializes model parameters prior to fitting.
 
         Parameters
@@ -61,7 +61,7 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             raise ValueError("rows of transmat_ must sum to 1.0 (got {})"
                              .format(self.transmat_.sum(axis=1)))
 
-    def _compute_log_likelihood(self, X ,Y):
+    def _compute_log_likelihood(self,X):
         """Computes per-component log probability under the model.
 
         Parameters
@@ -75,11 +75,10 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             Log probability of each sample in ``X`` for each of the
             model states.
         """
-        a = X
-        b = Y
-        phyloLL = myPhylo.GTR_model.computelikelihood()
-        pdf, err = quad(phyloLL[0], a, b)
-        return  pdf
+
+
+
+        return
 
 
 
