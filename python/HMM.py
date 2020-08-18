@@ -2,7 +2,7 @@ import numpy as np
 from hmmlearn import hmm
 import matplotlib.pyplot as plt
 import pandas as pd
-import phyloLL_emission
+import phyloHMM
 
 
 
@@ -25,7 +25,7 @@ bstd= .001
 
 
 
-model = phyloLL_emission.phyloLL_HMM(n_components=2 ,algorithm='viterbi')
+model = phyloHMM.phyloLL_HMM(n_components=2, algorithm='viterbi')
 model.startprob_ = np.array([0.98, 0.02])
 model.transmat_ = np.array([[0.9999, 0.0001] , [0.0001, 0.9999]])
 

@@ -64,7 +64,7 @@ def computelikelihood(tree, dna , model):
             pos += 1
             partial[node.index][i] = 1
         else:
-            # print("node.index: ",node.index)
+            print("node.index: ",node.index)
             children = node.child_nodes()
             # print("child index:" ,children[0].index , "  edge_length0 : ",children[0].edge_length)
             partial[node.index] = np.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
@@ -254,35 +254,49 @@ def wholeAlignmentLikelihood(tree, alignment , model):
     return LL_root , LL_partial
 
 #     =======================================================================================
-def make_recombination_trees1(tree, co_recom):
-    recombination_trees = []
-    recombination_trees.append(tree.as_string(schema="newick"))
-    for node in tree.postorder_node_iter():
-        if node.edge.length is None:
-            node.edge.length = 0
-        # print(node.edge.length)
-        if node.edge.length > 0:
-            node.edge.length = node.edge.length * co_recom
-            recombination_trees.append(tree.as_string(schema="newick"))
-            node.edge.length = node.edge.length * 1 / co_recom
-
-    return recombination_trees
-
+def reroot_tree(tree, nodes):
+    pdm = tree.phylogenetic_distance_matrix()
+    taxon = tree.taxon_namespace
+    mrca = pdm.mrca(taxon[nodes[0]], taxon[nodes[1]])
+    tree.reroot_at_node(mrca, update_bipartitions=False)
+    return mrca
 #     =======================================================================================
-def make_recombination_trees(tree, dna,targetnode,co_recom):
-    set_index(tree,dna)
+def make_hmm_input(tree, alignment, model, nodes):
+    reroot_tree(tree, nodes)
+    sitell, partial = wholeAlignmentLikelihood(tree, alignment, model)
+    children = tree.seed_node.child_nodes()
+    children_count = len(children)
+    x = np.zeros((alignment.sequence_size, children_count * 4))
+    for id, child in enumerate(children):
+        x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
+    return x
+#     =======================================================================================
+def make_recombination_trees(tree,co_recom ,params):
     recombination_trees = []
     recombination_trees.append(tree.as_string(schema="newick"))
-    for node in tree.postorder_node_iter():
-        if node.edge.length is None:
-            node.edge.length = 0
-        # print(node.edge.length)
-        if (node.edge.length > 0) and not(node.parent_node.index == targetnode)  :
-            node.edge.length = node.edge.length * co_recom
-            recombination_trees.append(tree.as_string(schema="newick"))
-            node.edge.length = node.edge.length * (1 / co_recom)
+    tmp_tree1 = tree.extract_tree()
+    # tmp_tree2 = tree.extract_tree()
+
+    mrca = reroot_tree(tmp_tree1, params)
+    children = mrca.child_nodes()
+    children[0].edge.length = children[0].edge.length * co_recom
+    children[1].edge.length = children[1].edge.length * co_recom
+    children[2].edge.length = children[2].edge.length / co_recom
+    recombination_trees.append(tmp_tree1.as_string(schema="newick"))
+    recombination_trees.append(tmp_tree1.as_string(schema="newick"))
+
+
+
+
+    mrca = reroot_tree(tree, params)
+    children = mrca.child_nodes()
+    children[0].edge.length = children[0].edge.length / co_recom
+    children[1].edge.length = children[1].edge.length / co_recom
+    children[2].edge.length = children[2].edge.length * co_recom
+    recombination_trees.append(tree.as_string(schema="newick"))
+
 
     return recombination_trees
-
+#     =======================================================================================
 
 
