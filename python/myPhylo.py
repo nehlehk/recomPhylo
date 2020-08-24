@@ -271,29 +271,31 @@ def make_hmm_input(tree, alignment, model, nodes):
         x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
     return x
 #     =======================================================================================
-def make_recombination_trees(tree,co_recom ,params):
+def make_recombination_trees(tree,co_recom ,params , target_type):
     recombination_trees = []
     recombination_trees.append(tree.as_string(schema="newick"))
-    tmp_tree1 = tree.extract_tree()
-    # tmp_tree2 = tree.extract_tree()
 
-    mrca = reroot_tree(tmp_tree1, params)
-    children = mrca.child_nodes()
-    children[0].edge.length = children[0].edge.length * co_recom
-    children[1].edge.length = children[1].edge.length * co_recom
-    children[2].edge.length = children[2].edge.length / co_recom
-    recombination_trees.append(tmp_tree1.as_string(schema="newick"))
-    recombination_trees.append(tmp_tree1.as_string(schema="newick"))
+    if (target_type == 1) :
+        tmp_tree1 = tree.extract_tree()
+        mrca = reroot_tree(tmp_tree1, params)
+        children = mrca.child_nodes()
+        children[0].edge.length = children[0].edge.length + co_recom
+        children[1].edge.length = children[1].edge.length + co_recom
+        children[2].edge.length = children[2].edge.length - co_recom
+        recombination_trees.append(tmp_tree1.as_string(schema="newick"))
+        recombination_trees.append(tmp_tree1.as_string(schema="newick"))
 
-
-
-
-    mrca = reroot_tree(tree, params)
-    children = mrca.child_nodes()
-    children[0].edge.length = children[0].edge.length / co_recom
-    children[1].edge.length = children[1].edge.length / co_recom
-    children[2].edge.length = children[2].edge.length * co_recom
-    recombination_trees.append(tree.as_string(schema="newick"))
+        mrca = reroot_tree(tree, params)
+        children = mrca.child_nodes()
+        children[0].edge.length = children[0].edge.length - co_recom
+        children[1].edge.length = children[1].edge.length - co_recom
+        children[2].edge.length = children[2].edge.length + co_recom
+        recombination_trees.append(tree.as_string(schema="newick"))
+    elif (target_type == 2):
+        tmp_tree1 = tree.extract_tree()
+        mrca = reroot_tree(tmp_tree1, params)
+        children = mrca.child_nodes()
+        tmp_tree1.prune_taxa(children[0].taxon)
 
 
     return recombination_trees
