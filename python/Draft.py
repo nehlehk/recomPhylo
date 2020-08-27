@@ -4,9 +4,9 @@ import myPhylo
 import numpy as np
 import phyloHMM
 
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_6taxa.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/tree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/sample_6taxa.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/wholegenome.fasta"), schema="fasta")
 
 
 
@@ -33,50 +33,92 @@ def tree_evolver(tree ,node ,nu , position):
     recombination_trees = []
     co_recom = nu/2
     parent = node.parent_node
-    print("my node:", node.index , node.edge_length)
-    print("parent:" , parent.index, parent.edge_length)
-    # print("sister:" , sister[0].index, sister[0].edge_length)
-    if (co_recom + node.edge_length) < (node.edge_length + parent.edge_length):
+    grandparent = parent.parent_node
+    print("My node is:" , node.index , node.edge_length)
+    print("parent::" , parent.index)
+    print("grandparent::", grandparent.index)
+    print(parent.distance_from_tip())
+
+    # topology does not change in this case:
+    if (co_recom + node.edge_length) < (parent.distance_from_tip()):
+        print(" *********** Stage one ***********")
         node.edge.length = node.edge.length + co_recom
-        if (position == 'left') or (position == 'right'):
+        if (position == 'left') or (position == 'right') or (position == 'top'):
             sister = node.sister_nodes()
             sister[0].edge.length = sister[0].edge.length + co_recom
             parent.edge.length = parent.edge.length - co_recom
-        elif (position == 'top'):
-            children = node.child_nodes()
-            children[0].edge.length = children[0].edge.length - co_recom
-            children[1].edge.length = children[1].edge.length - co_recom
+        # elif (position == 'top'):
+        #     node.edge.length = node.edge.length + co_recom
+        #     sister = node.sister_nodes()
+        #     sister[0].edge.length = sister[0].edge.length + co_recom
+        #     parent.edge.length = parent.edge.length - co_recom
+            # children = node.child_nodes()
+            # children[0].edge.length = children[0].edge.length - co_recom
+            # children[1].edge.length = children[1].edge.length - co_recom
+        recombination_trees.append(tree.as_string(schema="newick"))
+
+    # changing in topology to make recombination tree:
+    elif ((co_recom + node.edge_length) > parent.distance_from_tip())  and ((co_recom + node.edge_length) < tree.max_distance_from_root()):
+        print(" *********** Stage Two ***********")
+        ancestor = []
+        recom_length = co_recom + node.edge_length
+        for id,tmp_node in enumerate(node.ancestor_iter()):
+            ancestor.append(tmp_node)
+            # print(id ,"::::::",tmp_node.index)
+            if recom_length < tmp_node.distance_from_tip() :
+                attached_node = tmp_node
+                attached_id = id
+                # print(attached_node.index)
+                break
+
+        relocated_nodes = ancestor[attached_id-1]  # relocated node is the adjacent node of recombinant node
+        parent.remove_child(node)         # the original recombinant node was removed to reinsert in the other side
+        attached_node.remove_child(relocated_nodes) # relocated node was removed to reinsert in to right side
+        newborn = dendropy.datamodel.treemodel.Node()  # newborn in the new mrca of recombinant node and its sister
+        newborn.edge_length = attached_node.distance_from_tip() - recom_length
+        node.edge_length = recom_length
+        newborn.add_child(node)
+        relocated_nodes.edge_length = relocated_nodes.edge_length - newborn.edge_length
+        newborn.add_child(relocated_nodes)
+        attached_node.add_child(newborn)
         recombination_trees.append(tree.as_string(schema="newick"))
 
 
-    elif ((co_recom + node.edge_length) > (node.edge_length + parent.edge_length)) and (co_recom + node.edge_length) < tree.max_distance_from_root() :
-        print("medium modification")
-    elif (co_recom + node.edge_length) > tree.max_distance_from_root():
-        print("final modification")
-
+    elif (co_recom + node.edge_length) >= tree.max_distance_from_root() :
+        print(" *********** Stage Three ***********")
+        parent.remove_child(node)  # the original recombinant node was removed
+        tree.seed_node.add_child(node)
+        node.edge_length = co_recom + node.edge_length
+        recombination_trees.append(tree.as_string(schema="newick"))
     return recombination_trees
 
 
-node0 = tree.find_node_with_taxon_label(label ="0")
-re0 = tree_evolver(tree, node0 , 0.1 ,'right')
-print(re0)
+# node0 = tree.find_node_with_taxon_label(label ="0")
+# re0 = tree_evolver(tree, node0 , .5 ,'right')
+# print(re0)
+# print(tree.as_ascii_plot(plot_metric='length'))
 
-tree = Tree.get_from_path(tree_path, 'newick')
-myPhylo.set_index(tree,column[0])
-
-node1 = tree.find_node_with_taxon_label(label ="1")
-re1 = tree_evolver(tree, node1 , 0.1, 'left')
-print(re1)
-
-tree = Tree.get_from_path(tree_path, 'newick')
+# tree = Tree.get_from_path(tree_path, 'newick')
+# myPhylo.set_index(tree,column[0])
+#
+# node1 = tree.find_node_with_taxon_label(label ="4")
+# re1 = tree_evolver(tree, node1 , .01, 'left')
+# print(re1)
+# print(tree.as_ascii_plot(plot_metric='length'))
+#
+# tree = Tree.get_from_path(tree_path, 'newick')
 myPhylo.set_index(tree,column[0])
 
 taxon = tree.taxon_namespace
+print(taxon)
 pdm = tree.phylogenetic_distance_matrix()
-mrca = pdm.mrca(taxon[0], taxon[1])
+mrca = pdm.mrca(taxon[0], taxon[2])
+print(mrca.index)
 
-re2 = tree_evolver(tree, mrca , 0.1 , 'top')
+
+re2 = tree_evolver(tree, mrca , 0.8 , 'top')
 print(re2)
+print(tree.as_ascii_plot(plot_metric='length'))
 
 
 # c = tree.nodes()
@@ -88,9 +130,7 @@ print(re2)
 # print(tree.max_distance_from_root())
 #
 
-#
-#
-#
+
 # pdm = tree.phylogenetic_distance_matrix()
 # taxon = tree.taxon_namespace
 # mrca = pdm.mrca(taxon[0], taxon[1])

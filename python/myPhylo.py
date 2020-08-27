@@ -64,7 +64,7 @@ def computelikelihood(tree, dna , model):
             pos += 1
             partial[node.index][i] = 1
         else:
-            print("node.index: ",node.index)
+            # print("node.index: ",node.index)
             children = node.child_nodes()
             # print("child index:" ,children[0].index , "  edge_length0 : ",children[0].edge_length)
             partial[node.index] = np.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
@@ -261,8 +261,12 @@ def reroot_tree(tree, nodes):
     tree.reroot_at_node(mrca, update_bipartitions=False)
     return mrca
 #     =======================================================================================
-def make_hmm_input(tree, alignment, model, nodes):
-    reroot_tree(tree, nodes)
+def make_hmm_input(tree, alignment, model , target_node):
+    # reroot_tree(tree, nodes)
+    # print("seed node in hmm before reroot:", tree.seed_node.index)
+    # tree.reroot_at_node(target_node, update_bipartitions=True)
+    # print("seed node in hmm after reroot:", tree.seed_node.index)
+    # print(tree.as_string(schema='newick'))
     sitell, partial = wholeAlignmentLikelihood(tree, alignment, model)
     children = tree.seed_node.child_nodes()
     children_count = len(children)
