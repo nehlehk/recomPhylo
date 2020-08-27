@@ -23,9 +23,7 @@ def reset_tree():
 
 
 # ==============================================   input  ==============================================================
-# print("Original tree")
-# print(tree.as_string(schema='newick'))
-# print(tree.as_ascii_plot(plot_metric='length'))
+
 
 
 internl_nodes = tree.postorder_internal_node_iter(exclude_seed_node=True)
@@ -33,36 +31,27 @@ target_nodes = []
 for node in internl_nodes:
     target_nodes.append(node)
 
-for i in range(len(target_nodes)):
-    print(target_nodes[i].index)
+
+# print("Original tree:::::::::::::::")
+# print(tree.as_string(schema='newick'))
+# print(tree.as_ascii_plot())
+
+tree = Tree.get_from_path(tree_path, 'newick')
+myPhylo.set_index(tree, column[0])
+tree.reroot_at_node(target_nodes[1], update_bipartitions = False)
+
+# print("Reroot tree:::::::::::::::")
+# print(tree.as_string(schema='newick'))
+# print(tree.as_ascii_plot())
+
+X = myPhylo.make_hmm_input(tree,alignment,GTR_sample)
+print(X)
+
+# print("After hmm tree:::::::::::::::")
+# print(tree.as_string(schema='newick'))
+# print(tree.as_ascii_plot())
 
 
-
-# for i in range(len(target_nodes)):
-#     print("Original tree:::::::::::::::")
-#     print(tree.as_string(schema='newick'))
-#     print(tree.as_ascii_plot())
-#     print("target node is ", target_nodes[i].index)
-#     tree.reroot_at_node(target_nodes[i], update_bipartitions = True)
-#     print("Reroot tree:::::::::::::::")
-#     print(tree.as_string(schema='newick'))
-#     print(tree.as_ascii_plot())
-#     # print("seed node after reroot:", tree.seed_node.index)
-#     # print(tree.as_string(schema='newick'))
-#     # children = tree.seed_node.child_nodes()
-#     # for id, child in enumerate(children):
-#     #     print(child.index)
-#     X = myPhylo.make_hmm_input(tree,alignment,GTR_sample,target_nodes[i])
-#     print("After hmm tree:::::::::::::::")
-#     print(tree.as_string(schema='newick'))
-#     print(tree.as_ascii_plot())
-#     # print(X)
-#     tree = Tree.get_from_path(tree_path, 'newick')
-#     myPhylo.set_index(tree, column[0])
-#     print("After reset:::::::::::::::")
-#     print(tree.as_string(schema='newick'))
-#     print(tree.as_ascii_plot())
-#     print("********************************************************************************************************")
 
 
 

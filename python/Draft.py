@@ -4,9 +4,9 @@ import myPhylo
 import numpy as np
 import phyloHMM
 
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/tree.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_6taxa.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/sample_6taxa.fasta"), schema="fasta")
 
 
 
@@ -29,7 +29,7 @@ print(tree.as_ascii_plot(plot_metric='length'))
 
 
 
-def tree_evolver(tree ,node ,nu , position):
+def tree_evolver(tree ,node ,nu):
     recombination_trees = []
     co_recom = nu/2
     parent = node.parent_node
@@ -40,28 +40,19 @@ def tree_evolver(tree ,node ,nu , position):
     print(parent.distance_from_tip())
 
     # topology does not change in this case:
-    if (co_recom + node.edge_length) < (parent.distance_from_tip()):
+    if (co_recom + node.edge_length/2) < (parent.distance_from_tip()):
         print(" *********** Stage one ***********")
-        node.edge.length = node.edge.length + co_recom
-        if (position == 'left') or (position == 'right') or (position == 'top'):
-            sister = node.sister_nodes()
-            sister[0].edge.length = sister[0].edge.length + co_recom
-            parent.edge.length = parent.edge.length - co_recom
-        # elif (position == 'top'):
-        #     node.edge.length = node.edge.length + co_recom
-        #     sister = node.sister_nodes()
-        #     sister[0].edge.length = sister[0].edge.length + co_recom
-        #     parent.edge.length = parent.edge.length - co_recom
-            # children = node.child_nodes()
-            # children[0].edge.length = children[0].edge.length - co_recom
-            # children[1].edge.length = children[1].edge.length - co_recom
+        node.edge.length = node.edge.length/2 + co_recom
+        sister = node.sister_nodes()
+        sister[0].edge.length = sister[0].edge.length/2 + co_recom
+        parent.edge.length = parent.edge.length - co_recom
         recombination_trees.append(tree.as_string(schema="newick"))
 
     # changing in topology to make recombination tree:
-    elif ((co_recom + node.edge_length) > parent.distance_from_tip())  and ((co_recom + node.edge_length) < tree.max_distance_from_root()):
+    elif ((co_recom + node.edge_length /2) > parent.distance_from_tip())  and ((co_recom + node.edge_length /2) < tree.max_distance_from_root()):
         print(" *********** Stage Two ***********")
         ancestor = []
-        recom_length = co_recom + node.edge_length
+        recom_length = co_recom + node.edge_length/2
         for id,tmp_node in enumerate(node.ancestor_iter()):
             ancestor.append(tmp_node)
             # print(id ,"::::::",tmp_node.index)
@@ -83,12 +74,11 @@ def tree_evolver(tree ,node ,nu , position):
         attached_node.add_child(newborn)
         recombination_trees.append(tree.as_string(schema="newick"))
 
-
-    elif (co_recom + node.edge_length) >= tree.max_distance_from_root() :
+    elif (co_recom + node.edge_length /2 ) >= tree.max_distance_from_root() :
         print(" *********** Stage Three ***********")
         parent.remove_child(node)  # the original recombinant node was removed
         tree.seed_node.add_child(node)
-        node.edge_length = co_recom + node.edge_length
+        node.edge_length = co_recom + node.edge_length /2
         recombination_trees.append(tree.as_string(schema="newick"))
     return recombination_trees
 

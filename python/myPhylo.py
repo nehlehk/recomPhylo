@@ -261,7 +261,7 @@ def reroot_tree(tree, nodes):
     tree.reroot_at_node(mrca, update_bipartitions=False)
     return mrca
 #     =======================================================================================
-def make_hmm_input(tree, alignment, model , target_node):
+def make_hmm_input(tree, alignment, model):
     # reroot_tree(tree, nodes)
     # print("seed node in hmm before reroot:", tree.seed_node.index)
     # tree.reroot_at_node(target_node, update_bipartitions=True)
