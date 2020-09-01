@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.linalg as la
+import dendropy
 
 
 class GTR_model:
@@ -55,7 +56,7 @@ def computelikelihood(tree, dna , model):
 
     tips = len(dna)
     partial = np.zeros(((2 * tips) -1, 4))
-    set_index(tree,dna)
+    # set_index(tree,dna)
 
     pos = 0
     for node in tree.postorder_node_iter():
@@ -262,16 +263,12 @@ def reroot_tree(tree, nodes):
     return mrca
 #     =======================================================================================
 def make_hmm_input(tree, alignment, model):
-    # reroot_tree(tree, nodes)
-    # print("seed node in hmm before reroot:", tree.seed_node.index)
-    # tree.reroot_at_node(target_node, update_bipartitions=True)
-    # print("seed node in hmm after reroot:", tree.seed_node.index)
-    # print(tree.as_string(schema='newick'))
     sitell, partial = wholeAlignmentLikelihood(tree, alignment, model)
     children = tree.seed_node.child_nodes()
     children_count = len(children)
     x = np.zeros((alignment.sequence_size, children_count * 4))
     for id, child in enumerate(children):
+        # print(child.index)
         x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
     return x
 #     =======================================================================================
@@ -304,5 +301,65 @@ def make_recombination_trees(tree,co_recom ,params , target_type):
 
     return recombination_trees
 #     =======================================================================================
+def tree_evolver(tree ,node ,nu , position):
+    recombination_trees = []
+    co_recom = nu/2
+    parent = node.parent_node
+    # grandparent = parent.parent_node
+    # print("My node is:" , node.index , node.edge_length)
+    # print("parent::" , parent.index)
+    # print("grandparent::", grandparent.index)
+    # print(parent.distance_from_tip())
 
+    if (node.edge_length is None):
+       node.edge.length = 0
+    if (parent.edge.length is None):
+        parent.edge.length = 0
+
+    # topology does not change in this case:
+    if ((co_recom + node.edge_length) < parent.distance_from_tip()) and (position == "descendant"):
+        print(" *********** Stage one --- descendant  ***********")
+        node.edge.length = node.edge.length + co_recom
+        sister = node.sister_nodes()
+        sister[0].edge.length = sister[0].edge.length + co_recom
+        parent.edge.length = parent.edge.length - co_recom
+        recombination_trees.append(tree.as_string(schema="newick"))
+    elif ((co_recom + node.edge_length) < parent.distance_from_tip()) and (position == "ancestor"):
+        print(" *********** Stage one --- ancestor  ***********")
+        node.edge.length = node.edge.length + co_recom
+
+    # changing in topology to make recombination tree:
+    elif ((co_recom + node.edge_length) > parent.distance_from_tip())  and ((co_recom + node.edge_length) < tree.max_distance_from_root()):
+        # print(" *********** Stage Two ***********")
+        ancestor = []
+        recom_length = co_recom + node.edge_length
+        for id,tmp_node in enumerate(node.ancestor_iter()):
+            ancestor.append(tmp_node)
+            # print(id ,"::::::",tmp_node.index)
+            if recom_length < tmp_node.distance_from_tip() :
+                attached_node = tmp_node
+                attached_id = id
+                # print(attached_node.index)
+                break
+
+        relocated_nodes = ancestor[attached_id-1]  # relocated node is the adjacent node of recombinant node
+        parent.remove_child(node)         # the original recombinant node was removed to reinsert in the other side
+        attached_node.remove_child(relocated_nodes) # relocated node was removed to reinsert in to right side
+        newborn = dendropy.datamodel.treemodel.Node()  # newborn in the new mrca of recombinant node and its sister
+        newborn.edge_length = attached_node.distance_from_tip() - recom_length
+        node.edge_length = recom_length
+        newborn.add_child(node)
+        relocated_nodes.edge_length = relocated_nodes.edge_length - newborn.edge_length
+        newborn.add_child(relocated_nodes)
+        attached_node.add_child(newborn)
+        recombination_trees.append(tree.as_string(schema="newick"))
+
+    # changeing in topology when recombiantion is larger than tree.max_distance_from_root()
+    elif (co_recom + node.edge_length ) >= tree.max_distance_from_root() :
+        # print(" *********** Stage Three ***********")
+        parent.remove_child(node)  # the original recombinant node was removed
+        tree.seed_node.add_child(node)
+        node.edge_length = co_recom + node.edge_length
+        recombination_trees.append(tree.as_string(schema="newick"))
+    return recombination_trees
 
