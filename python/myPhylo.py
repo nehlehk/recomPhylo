@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.linalg as la
 import dendropy
+from dendropy import Tree
 
 
 class GTR_model:
@@ -272,7 +273,7 @@ def make_hmm_input(tree, alignment, model):
         x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
     return x
 #     =======================================================================================
-def make_recombination_trees(tree,co_recom ,params , target_type):
+def make_recombination_trees_old(tree,co_recom ,params , target_type):
     recombination_trees = []
     recombination_trees.append(tree.as_string(schema="newick"))
 
@@ -362,4 +363,46 @@ def tree_evolver(tree ,node ,nu , position):
         node.edge_length = co_recom + node.edge_length
         recombination_trees.append(tree.as_string(schema="newick"))
     return recombination_trees
+#     =======================================================================================
+def tree_evolver_rerooted(tree ,node ,nu):
+    co_recom = nu/2
+    if (node.edge_length is None):
+       node.edge.length = 0
+    node.edge.length = node.edge.length + co_recom
+    recombination_tree = tree.as_string(schema="newick")
 
+    return recombination_tree
+#     =======================================================================================
+def find_kids_index(node):
+    kids = []
+    for id, child in enumerate(node.child_node_iter()):
+        kids.append(child.index)
+    return kids
+#     =======================================================================================
+def find_sibling_index(node):
+    s = []
+    sibling = node.sibling_nodes()
+    for i in range(len(sibling)):
+        s.append(sibling[i].index)
+    return s
+#     =======================================================================================
+def find_node_position(node,target_kids):
+    sister = find_sibling_index(node)
+    if sister[0] in target_kids:
+        return "descendant"
+    else:
+        return "ancestor"
+#     =======================================================================================
+def make_recombination_trees(tree_path,tree,dna,target_node , nu):
+    temptree = {}
+    recombination_trees = []
+    tree.reroot_at_node(target_node, update_bipartitions=False, suppress_unifurcations=True)
+    recombination_trees.append(tree.as_string(schema="newick"))
+    for id, child in enumerate(target_node.child_node_iter()):
+            temptree["tree{}".format(id)] = Tree.get_from_path(tree_path, 'newick')
+            set_index(temptree["tree{}".format(id)], dna)
+            temptree["tree{}".format(id)].reroot_at_node(target_node, update_bipartitions=False, suppress_unifurcations=True)
+            filter_fn = lambda n: hasattr(n, 'index') and n.index == child.index
+            recombined_node = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
+            recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)],recombined_node,nu))
+    return recombination_trees

@@ -6,7 +6,7 @@ import myPhylo
 import dendropy
 
 
-def compute_logprob_phylo(X, tree, nodes, model):
+def compute_logprob_phylo_old(X, tree, nodes, model):
     recom_trees = myPhylo.make_recombination_trees(tree, 5, nodes)
     n, dim = X.shape
     result = np.zeros((n, len(recom_trees)))
@@ -23,15 +23,29 @@ def compute_logprob_phylo(X, tree, nodes, model):
     return result
 
 
+def compute_logprob_phylo(X, recom_trees, model):
+    n, dim = X.shape
+    result = np.zeros((n, len(recom_trees)))
+    for tree_id, item in enumerate(recom_trees):
+        state_tree = dendropy.Tree.get(data=item, schema="newick")
+        children = state_tree.seed_node.child_nodes()
+        for site_id, partial in enumerate(X):
+            p = np.zeros(4)
+            p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
+            for i in range(1, len(children)):
+                p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
+            result[site_id, tree_id] = sum(p)
+    return result
+
+
 _log = logging.getLogger(__name__)
 
 
 
 class phyloLL_HMM(hmmlearn.base._BaseHMM):
-    def __init__(self, n_components, tree, nodes, model):
+    def __init__(self, n_components, trees, model):
         super().__init__(n_components)
-        self.tree = tree
-        self.nodes = nodes
+        self.trees = trees
         self.model = model
 
     def _init(self, X, lengths):
@@ -103,6 +117,6 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             model states.
         """
 
-        return compute_logprob_phylo(X, self.tree, self.nodes, self.model)
+        return compute_logprob_phylo(X, self.trees, self.model)
 
 #     ==========================================================================

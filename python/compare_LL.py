@@ -6,6 +6,7 @@ import myPhylo
 
 tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/exampledataset_RAxML_bestTree'
 tree = Tree.get_from_path(tree_path, 'newick')
+tree2 = Tree.get_from_path('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/RerootTree_node12', 'newick')
 alignment = DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/wholegenome.fasta"), schema="fasta")
 
 
@@ -15,6 +16,7 @@ GTR_sample = myPhylo.GTR_model(rates,pi)
 
 column = myPhylo.get_DNA_fromAlignment(alignment)
 myPhylo.set_index(tree,column[0])
+myPhylo.set_index(tree2,column[0])
 dna = column[0]
 
 
@@ -22,25 +24,25 @@ print("Original tree:::::::::::::::")
 print(tree.as_string(schema='newick'))
 print(tree.as_ascii_plot())
 
-# LL_normal = myPhylo.computelikelihood(tree,dna,GTR_sample)
-# W_LL_normal = myPhylo.wholeAlignmentLikelihood(tree,alignment,GTR_sample)
-#
-#
-# print("LL_normal:" , LL_normal[0])
-# n= W_LL_normal[0]
-# print(n[0:25])
+LL_normal = myPhylo.computelikelihood(tree,dna,GTR_sample)
+W_LL_normal = myPhylo.wholeAlignmentLikelihood(tree,alignment,GTR_sample)
 
-filter_fn = lambda n: hasattr(n, 'index') and n.index == 14
-target_node = tree.find_node(filter_fn=filter_fn)
-tree.reroot_at_node(target_node, update_bipartitions=False ,suppress_unifurcations = True)
 
-# LL_Reroot = myPhylo.computelikelihood(tree,dna,GTR_sample)
-# W_LL_rerooted = myPhylo.wholeAlignmentLikelihood(tree,alignment,GTR_sample)
-#
-# print("LL_Reroot:" , LL_Reroot[0])
-# r = W_LL_rerooted[0]
-# print(r[0:25])
+print("LL_normal:" , LL_normal[0])
+n= W_LL_normal[0]
+print(n[0:25])
+
+# filter_fn = lambda n: hasattr(n, 'index') and n.index == 14
+# target_node = tree.find_node(filter_fn=filter_fn)
+# tree.reroot_at_node(target_node, update_bipartitions=False ,suppress_unifurcations = True)
+
+LL_Reroot = myPhylo.computelikelihood(tree2,dna,GTR_sample)
+W_LL_rerooted = myPhylo.wholeAlignmentLikelihood(tree2,alignment,GTR_sample)
+
+print("LL_Reroot:" , LL_Reroot[0])
+r = W_LL_rerooted[0]
+print(r[0:25])
 
 print("Re_root tree:::::::::::::::")
-print(tree.as_string(schema='newick'))
-print(tree.as_ascii_plot())
+print(tree2.as_string(schema='newick'))
+print(tree2.as_ascii_plot())
