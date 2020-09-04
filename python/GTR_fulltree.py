@@ -13,16 +13,17 @@ def give_index(c):
     elif c == "T":
         return 3
 # =======================================================================================================
-dna = 'CGCC'
+dna = 'AAAAAA'
 
-tips = 4 #tips number
+tips = 6 #tips number
 br_length = 0.1
 rates = np.ones(5)
 pi = [0.25]*4
 
 
-tree = dendropy.Tree.get_from_string('((1,2)5,3,4)6;', 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/0_Research/PhD/Data/test.fasta"), schema="fasta")
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_6taxa.tree'
+tree = dendropy.Tree.get_from_path(tree_path, 'newick')
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/sample_6taxa.fasta"), schema="fasta")
 partial = np.zeros((4,2*tips))
 
 
@@ -69,10 +70,10 @@ p = np.dot(left, np.dot(np.diag(np.exp(eigval * br_length)), right))
 
 
 for node in tree.postorder_node_iter():
-    node.index = -1
+    node.index = 0
     node.annotations.add_bound_attribute("index")
 
-s = tips + 1
+s = tips
 for id,node in enumerate(tree.postorder_node_iter()):
     if not node.is_leaf():
         node.index = s
@@ -98,7 +99,7 @@ for node in tree.postorder_node_iter():
                     sump.append(z)
                 partial[j][node.index-1] = np.prod(sump)
 
-
+print(partial)
 
 temp = []
 for i in range(4):

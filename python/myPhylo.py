@@ -8,7 +8,9 @@ class GTR_model:
     def __init__(self, rates, pi):
         self.rates = rates
         self.pi = pi
-
+    #     ========================================================================
+    def get_pi(self):
+        return self.pi
     #     ========================================================================
     def p_matrix(self , br_length):
         p = np.zeros((4, 4))
@@ -36,20 +38,28 @@ class GTR_model:
         exchang[1][3] = exchang[3][1] = e
         exchang[2][3] = exchang[3][2] = f
 
+
         q = np.multiply(np.dot(exchang, freq), mu)
 
         for i in range(4):
             q[i][i] = -sum(q[i][0:4])
 
+
         s = np.dot(sqrtPi, np.dot(q, sqrtPiInv))
+
 
         eigval, eigvec = la.eig(s)
         eigvec_inv = la.inv(eigvec)
 
-        left = np.dot(sqrtPi, eigvec)
-        right = np.dot(eigvec_inv, sqrtPiInv)
+
+        # left = np.dot(sqrtPi, eigvec)
+        # right = np.dot(eigvec_inv, sqrtPiInv)
+
+        left = np.dot(sqrtPiInv, eigvec)
+        right = np.dot(eigvec_inv, sqrtPi)
 
         p = np.dot(left, np.dot(np.diag(np.exp(eigval * br_length)), right))
+
 
         return p
     #=============================================================================
@@ -72,22 +82,15 @@ def computelikelihood(tree, dna , model):
             partial[node.index] = np.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
             for i in range(1, len(children)):
                 # print("child index:" ,children[i].index , "edge_length  : ", children[i].edge_length)
-                partial[node.index] *= np.dot(model.p_matrix(children[i].edge_length),
-                                                 partial[children[i].index])
+                partial[node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[children[i].index])
 
 
 
-    # print(partial)
-    # ll_partial = np.zeros(2* tips)
-    # for i in range(tree.seed_node.index, tips -1, -1):
-    #     ll_partial[i] = round(np.log(np.mean(partial[i]) ), 7)
-    #
-    #
-    # persite_ll = ll_partial[tree.seed_node.index]
-    persite_ll = round(np.log(np.mean(partial[tree.seed_node.index]) ), 7)
+
+    p = np.dot(partial[tree.seed_node.index] , model.get_pi())
+    persite_ll = np.log(p)
 
     return persite_ll, partial
-
 #     ========================================================================
 def partial_likelihoods_to_target_node(tree,dna,model):
 
@@ -265,6 +268,8 @@ def reroot_tree(tree, nodes):
 #     =======================================================================================
 def make_hmm_input(tree, alignment, model):
     sitell, partial = wholeAlignmentLikelihood(tree, alignment, model)
+    print(sitell)
+    print(partial)
     children = tree.seed_node.child_nodes()
     children_count = len(children)
     x = np.zeros((alignment.sequence_size, children_count * 4))
@@ -406,3 +411,4 @@ def make_recombination_trees(tree_path,tree,dna,target_node , nu):
             recombined_node = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
             recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)],recombined_node,nu))
     return recombination_trees
+# ============================================================================================
