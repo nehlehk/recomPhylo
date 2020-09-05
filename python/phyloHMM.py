@@ -34,7 +34,10 @@ def compute_logprob_phylo(X, recom_trees, model):
             p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
             for i in range(1, len(children)):
                 p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
-            result[site_id, tree_id] = sum(p)
+            # result[site_id, tree_id] = sum(p)
+            # print(p)
+            site_l = np.dot(p, model.get_pi())
+            result[site_id, tree_id] = np.log(site_l)
     return result
 
 

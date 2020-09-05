@@ -4,9 +4,9 @@ from dendropy import Tree, DnaCharacterMatrix
 import myPhylo
 
 
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_6taxa.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/exampledataset_RAxML_bestTree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/sample_6taxa.fasta"), schema="fasta")
+alignment = DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/wholegenome.fasta"), schema="fasta")
 
 tree2 = Tree.get_from_path('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/RerootTree_node12', 'newick')
 
@@ -34,7 +34,7 @@ n= W_LL_normal[0]
 print(n)
 
 
-filter_fn = lambda n: hasattr(n, 'index') and n.index == 7
+filter_fn = lambda n: hasattr(n, 'index') and n.index == 11
 target_node = tree.find_node(filter_fn=filter_fn)
 tree.reroot_at_node(target_node, update_bipartitions=False ,suppress_unifurcations = True)
 

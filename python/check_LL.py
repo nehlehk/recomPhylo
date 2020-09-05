@@ -17,20 +17,20 @@ rates = [0.000100, 0.636612 ,2.547706, 0.000100 ,2.151395]
 GTR_sample = myPhylo.GTR_model(rates,pi)
 
 column = myPhylo.get_DNA_fromAlignment(alignment)
-dna = column[6]
+dna = column[0]
 myPhylo.set_index(tree,dna)
 
 print("Original tree:::::::::::::::")
 print(tree.as_string(schema='newick'))
 print(tree.as_ascii_plot())
 
-# persite_ll, partial = myPhylo.computelikelihood(tree,dna,GTR_sample)
+persite_ll, partial = myPhylo.computelikelihood(tree,dna,GTR_sample)
 
-# print(persite_ll)
-# print(partial)
+print(persite_ll)
+print(partial)
 
 
-myPhylo.computelikelihood_2(tree,dna,GTR_sample)
+
 
 
 filter_fn = lambda n: hasattr(n, 'index') and n.index == 7
@@ -39,12 +39,12 @@ tree.reroot_at_node(target_node, update_bipartitions=False ,suppress_unifurcatio
 myPhylo.set_index(tree,dna)
 
 
-# R_persite_ll, R_partial  = myPhylo.computelikelihood(tree,dna,GTR_sample)
-myPhylo.computelikelihood_2(tree,dna,GTR_sample)
+R_persite_ll, R_partial  = myPhylo.computelikelihood(tree,dna,GTR_sample)
 
-#
-# print(R_persite_ll)
-# print(R_partial)
+
+
+print(R_persite_ll)
+print(R_partial)
 
 
 # print("Re_root tree:::::::::::::::")

@@ -268,8 +268,6 @@ def reroot_tree(tree, nodes):
 #     =======================================================================================
 def make_hmm_input(tree, alignment, model):
     sitell, partial = wholeAlignmentLikelihood(tree, alignment, model)
-    print(sitell)
-    print(partial)
     children = tree.seed_node.child_nodes()
     children_count = len(children)
     x = np.zeros((alignment.sequence_size, children_count * 4))

@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/tree_6taxa.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/exampledataset_RAxML_bestTree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/phyloHMM/sample_6taxa.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/wholegenome.fasta"), schema="fasta")
 
 
 pi = [0.317, 0.183 ,0.367 ,0.133]
@@ -30,10 +30,7 @@ print(tree.as_string(schema='newick'))
 print(tree.as_ascii_plot())
 
 
-sitell, partial = myPhylo.wholeAlignmentLikelihood(tree, alignment, GTR_sample)
-print(sitell)
-print(partial)
-
+# sitell, partial = myPhylo.wholeAlignmentLikelihood(tree, alignment, GTR_sample)
 
 
 mytree = []
@@ -68,7 +65,7 @@ print(recombination_trees)
 
 model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees,  model=GTR_sample)
 model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
-model.transmat_ = np.array( [[0.9999, 0.00002, 0.00006, 0.00002],
+model.transmat_ = np.array( [[0.88, 0.04, 0.04, 0.04],
                              [0.0007, 0.999, 0.0002, 0.0001],
                              [0.0008, 0.0001, 0.999, 0.0001],
                              [0.0008, 0.0001, 0.0001, 0.999]])
