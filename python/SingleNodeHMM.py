@@ -35,7 +35,7 @@ print(tree.as_ascii_plot())
 
 mytree = []
 recombination_trees = []
-filter_fn = lambda n: hasattr(n, 'index') and n.index == 7
+filter_fn = lambda n: hasattr(n, 'index') and n.index == 11
 target_node = tree.find_node(filter_fn=filter_fn)
 # ----------- Step 1 : Make input for hmm ------------------------------------------------------
 # --------------  Stetp 1.1 : re-root the tree based on the target node where the target node is each internal node of the tree.
@@ -64,6 +64,7 @@ print(recombination_trees)
 # ----------- Step 3: Call phyloHMM -----------------------------------------------------
 
 model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees,  model=GTR_sample)
+model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
 model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
 model.transmat_ = np.array( [[0.88, 0.04, 0.04, 0.04],
                              [0.0007, 0.999, 0.0002, 0.0001],

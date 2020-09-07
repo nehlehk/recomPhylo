@@ -17,7 +17,8 @@ rates = [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ]
 GTR_sample = myPhylo.GTR_model(rates,pi)
 
 column = myPhylo.get_DNA_fromAlignment(alignment)
-myPhylo.set_index(tree,column[0])
+dna = column[0]
+myPhylo.set_index(tree,dna)
 
 
 taxon = tree.taxon_namespace
@@ -41,7 +42,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
         # print(id_tree)
         recombination_trees = []
         mytree.append(Tree.get_from_path(tree_path, 'newick'))
-        myPhylo.set_index(mytree[id_tree], column[0])
+        myPhylo.set_index(mytree[id_tree], dna)
         # ----------- Step 1 : Make input for hmm ------------------------------------------------------
         # --------------  Stetp 1.1 : re-root the tree based on the target node where the target node is each internal node of the tree.
         mytree[id_tree].reroot_at_node(target_node, update_bipartitions=False ,suppress_unifurcations = True)
@@ -55,17 +56,16 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
         for id, child in enumerate(target_node.child_node_iter()):
                 # print(child.index)
                 temptree["tree{}".format(id)] = Tree.get_from_path(tree_path, 'newick')
-                myPhylo.set_index(temptree["tree{}".format(id)], column[0])
+                myPhylo.set_index(temptree["tree{}".format(id)], dna)
+
                 filter_fn = lambda n: hasattr(n, 'index') and n.index == target_node.index
                 target_node_temp = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
                 temptree["tree{}".format(id)].reroot_at_node(target_node_temp, update_bipartitions=False,suppress_unifurcations=True)
+
                 filter_fn = lambda n: hasattr(n, 'index') and n.index == child.index
                 recombined_node = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
                 recombination_trees.append(myPhylo.tree_evolver_rerooted(temptree["tree{}".format(id)],recombined_node,nu))
 
-
-        if target_node.index == 11:
-            print(recombination_trees)
 
         # ----------- Step 3: Call phyloHMM -----------------------------------------------------
         model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees,  model=GTR_sample)
