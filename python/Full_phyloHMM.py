@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/exampledataset_RAxML_bestTree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/RAxML_bestTree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/wholegenome.fasta"), schema="fasta")
 
 
 pi = [0.2184,0.2606,0.3265,0.1946]
@@ -19,10 +19,11 @@ GTR_sample = myPhylo.GTR_model(rates,pi)
 column = myPhylo.get_DNA_fromAlignment(alignment)
 dna = column[0]
 myPhylo.set_index(tree,dna)
+tips = len(dna)
 
 
 taxon = tree.taxon_namespace
-nu = 0.5
+nu = 0.4
 # ============================================  methods ================================================================
 
 
@@ -37,6 +38,7 @@ mytree = []
 posterior = []
 hiddenStates = []
 score = []
+figure = {}
 for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_seed_node=True)):
         print(target_node.index)
         # print(id_tree)
@@ -69,44 +71,58 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
         # ----------- Step 3: Call phyloHMM -----------------------------------------------------
         model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees,  model=GTR_sample)
-        model.startprob_ = np.array([0.85, 0.02, 0.12, 0.01])
-        model.transmat_ = np.array( [[0.9999, 0.00002, 0.00006, 0.00002],
-                                     [0.0007, 0.999, 0.0002, 0.0001],
-                                     [0.0008, 0.0001, 0.999, 0.0001],
-                                     [0.0008, 0.0001, 0.0001, 0.999]])
+        model.startprob_ = np.array([0.85, 0.05, 0.05, 0.05])
+        model.transmat_ = np.array([[0.997, 0.001, 0.001, 0.001],
+                                    [0.00098, 0.999, 0.00001, 0.00001],
+                                    [0.00098, 0.00001, 0.999, 0.00001],
+                                    [0.00098, 0.00001, 0.00001, 0.999]])
+
+        # posterior.append(model.predict_proba(X))
+        # hiddenStates.append(model.predict(X))
+        # score.append(model.score(X))
 
         posterior = model.predict_proba(X)
         hiddenStates = model.predict(X)
         score = model.score(X)
 
-        fig = plt.figure(figsize=(15, 8))
-
-        ax = fig.add_subplot(2, 1, 1)
-        ax.set_title("Hidden Markov Models - ClonalFrame and Recombination -- log probability of the most likely state is  " + str(score))
+        figure["plot{}".format(id_tree)] = plt.figure(figsize=(15, 8))
+        ax = figure["plot{}".format(id_tree)].add_subplot(2, 1, 1)
+        ax.set_title(
+                "Internal Node" + str(target_node.index) + " -- log probability of the most likely state is  " + str(score))
         ax.plot(hiddenStates)
         ax.set_ylabel("Clonal - Recombination State")
 
-        ax2 = fig.add_subplot(2, 1, 2)
+        ax2 = figure["plot{}".format(id_tree)].add_subplot(2, 1, 2)
         ax2.plot(posterior[:, 0], label="ClonalFrame")
         ax2.plot(posterior[:, 1], label="Recombination A ")
         ax2.plot(posterior[:, 2], label="Recombination B ")
         ax2.plot(posterior[:, 3], label="Recombination C ")
         ax2.set_ylabel("posterior probability for each state")
         ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
-        plt.show()
 
+
+plt.show()
 # ======================================================================================================================
-print("posterior:::::::::::::::::")
-print(posterior)
-
-print("hiddenStates::::::::::::::::")
-print(hiddenStates)
-
-print("score:::::::::::::::::::::")
-print(score)
-
-
-
+# figure = {}
+# for figID in range(len(posterior)):
+#         target_score = score[figID]
+#         target_hiddenStates = hiddenStates[figID]
+#         target_posterior = posterior[figID]
+#         figure["plot{}".format(figID)] = plt.figure(figsize=(15, 8))
+#         ax = figure["plot{}".format(figID)].add_subplot(2, 1, 1)
+#         ax.set_title("Internal node " +str(figID + tips)+ " -- log probability of the most likely state is  " + str(target_score))
+#         ax.plot(target_hiddenStates)
+#         ax.set_ylabel("Clonal - Recombination State")
+#
+#         ax2 = figure["plot{}".format(figID)].add_subplot(2, 1, 2)
+#         ax2.plot(target_posterior[:, 0], label="ClonalFrame")
+#         ax2.plot(target_posterior[:, 1], label="Recombination A ")
+#         ax2.plot(target_posterior[:, 2], label="Recombination B ")
+#         ax2.plot(target_posterior[:, 3], label="Recombination C ")
+#         ax2.set_ylabel("posterior probability for each state")
+#         ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
+#
+# plt.show()
 
 
 

@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/exampledataset_RAxML_bestTree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/RAxML_bestTree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/wholegenome.fasta"), schema="fasta")
 
 
 pi = [0.317, 0.183 ,0.367 ,0.133]
@@ -22,7 +22,9 @@ myPhylo.set_index(tree,dna)
 
 
 taxon = tree.taxon_namespace
-nu = 2
+nu = 0.4
+
+print(alignment.sequence_size)
 
 
 print("Original tree:::::::::::::::")
@@ -30,12 +32,10 @@ print(tree.as_string(schema='newick'))
 print(tree.as_ascii_plot())
 
 
-# sitell, partial = myPhylo.wholeAlignmentLikelihood(tree, alignment, GTR_sample)
-
 
 mytree = []
 recombination_trees = []
-filter_fn = lambda n: hasattr(n, 'index') and n.index == 11
+filter_fn = lambda n: hasattr(n, 'index') and n.index == 10
 target_node = tree.find_node(filter_fn=filter_fn)
 # ----------- Step 1 : Make input for hmm ------------------------------------------------------
 # --------------  Stetp 1.1 : re-root the tree based on the target node where the target node is each internal node of the tree.
@@ -64,12 +64,11 @@ print(recombination_trees)
 # ----------- Step 3: Call phyloHMM -----------------------------------------------------
 
 model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees,  model=GTR_sample)
-model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
-model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
-model.transmat_ = np.array( [[0.88, 0.04, 0.04, 0.04],
-                             [0.0007, 0.999, 0.0002, 0.0001],
-                             [0.0008, 0.0001, 0.999, 0.0001],
-                             [0.0008, 0.0001, 0.0001, 0.999]])
+model.startprob_ = np.array([0.85, 0.05, 0.05, 0.05])
+model.transmat_ = np.array([[0.997, 0.001, 0.001, 0.001],
+                            [0.00098, 0.999, 0.00001, 0.00001],
+                            [0.00098, 0.00001, 0.999, 0.00001],
+                            [0.00098, 0.00001, 0.00001, 0.999]])
 
 posterior = model.predict_proba(X)
 hiddenStates = model.predict(X)

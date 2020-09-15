@@ -1,7 +1,7 @@
 from Bio import AlignIO
 
 
-path = "/media/nehleh/295eaca0-f110-4b79-8cbe-bc99f9f61cbd/nehleh/0_Research/PhD/Data/simulationdata/recombination/exampledataset"
+path = "/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/exampledataset"
 
 alignment = AlignIO.read(path + "wholegenome.fasta", "fasta")
 
