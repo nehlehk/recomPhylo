@@ -4,8 +4,7 @@ import myPhylo
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy.linalg as la
-import logging
-import hmmlearn._utils
+import phyloHMM
 
 
 
@@ -28,6 +27,10 @@ tips = len(dna)
 tips_num = len(alignment)
 alignment_len = alignment.sequence_size
 
+
+print("Original tree")
+print(tree.as_string(schema='newick'))
+print(tree.as_ascii_plot())
 
 taxon = tree.taxon_namespace
 nu = 0.4
@@ -235,97 +238,6 @@ def compute_logprob_phylo(X, recom_trees, model):
     return result
 
 
-_log = logging.getLogger(__name__)
-
-
-class phyloLL_HMM(hmmlearn.base._BaseHMM):
-    def __init__(self, n_components, trees, model):
-        super().__init__(n_components)
-        self.trees = trees
-        self.model = model
-
-    def _init(self, X, lengths):
-
-        """Initializes model parameters prior to fitting.
-
-        Parameters
-        ----------
-        X : array-like, shape (n_samples, n_features)
-            Feature matrix of individual samples.
-            n_samples == number of alignment sites
-            n_features == 12: 4 site partials for each of 3 neighbour nodes
-
-        lengths : array-like of integers, shape (n_sequences, )
-            Lengths of the individual sequences in ``X``. The sum of
-            these should be ``n_samples``.
-        """
-        init = 1. / self.n_components
-        if 's' in self.init_params or not hasattr(self, "startprob_"):
-            self.startprob_ = np.full(self.n_components, init)
-        if 't' in self.init_params or not hasattr(self, "transmat_"):
-            self.transmat_ = np.full((self.n_components, self.n_components), init)
-        n_fit_scalars_per_param = self._get_n_fit_scalars_per_param()
-        n_fit_scalars = sum(n_fit_scalars_per_param[p] for p in self.params)
-        if X.size < n_fit_scalars:
-            _log.warning("Fitting a model with {} free scalar parameters with "
-                         "only {} data points will result in a degenerate "
-                         "solution.".format(n_fit_scalars, X.size))
-
-    #     ==========================================================================
-    def _check(self):
-        """Validates model parameters prior to fitting.
-
-        Raises
-        ------
-
-        ValueError
-            If any of the parameters are invalid, e.g. if :attr:`startprob_`
-            don't sum to 1.
-        """
-        self.startprob_ = np.asarray(self.startprob_)
-        if len(self.startprob_) != self.n_components:
-            raise ValueError("startprob_ must have length n_components")
-        if not np.allclose(self.startprob_.sum(), 1.0):
-            raise ValueError("startprob_ must sum to 1.0 (got {:.4f})"
-                             .format(self.startprob_.sum()))
-
-        self.transmat_ = np.asarray(self.transmat_)
-        if self.transmat_.shape != (self.n_components, self.n_components):
-            raise ValueError(
-                "transmat_ must have shape (n_components, n_components)")
-        if not np.allclose(self.transmat_.sum(axis=1), 1.0):
-            raise ValueError("rows of transmat_ must sum to 1.0 (got {})"
-                             .format(self.transmat_.sum(axis=1)))
-
-    #     ==========================================================================
-    def _compute_log_likelihood(self, X):
-        """Computes per-component log probability under the model.
-
-        Parameters
-        ----------
-        X : array-like, shape (n_samples, n_features)
-            Feature matrix of individual samples.
-
-        Returns
-        -------
-        logprob : array, shape (n_samples, n_components)def give_rho(node,recom_prob,site,tips_num):
-  parent = node.parent_node
-  if parent == tree.seed_node:
-    myindex = parent.index -1
-  else:
-    myindex = parent.index
-  # node_prob = recom_prob[myindex - tips_num][site]
-  node_prob = recom_prob[site]
-  rho = 1 - node_prob[0]
-
-  return rho
-            Log probability of each sample in ``X`` for each of the
-            model states.
-        """
-
-        return compute_logprob_phylo(X, self.trees, self.model)
-
-#     ==========================================================================
 
 
 
@@ -335,6 +247,7 @@ mytree = []
 posterior = []
 hiddenStates = []
 score = []
+figure = {}
 tipdata = set_tips_partial(tree, alignment)
 for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_seed_node=True)):
     print(target_node.index)
@@ -351,6 +264,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     # --------------  Step 1.2: Calculate X based on this re-rooted tree
 
     X = make_hmm_input_mixture(mytree[id_tree], alignment, tipdata, GTR_sample)
+    Y = myPhylo.make_hmm_input(mytree[id_tree], alignment, GTR_sample)
     print(X.shape)
 
     # ----------- Step 2: make 3 recombination trees -----------------------------------------------
@@ -371,16 +285,30 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
         recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)], recombined_node, nu))
 
     # ----------- Step 3: Call phyloHMM ----------------------------------------------------------
-    model = phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample)
+    model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample)
     model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
     model.transmat_ = np.array([[0.997, 0.001, 0.001, 0.001],
                                 [0.00098, 0.999, 0.00001, 0.00001],
                                 [0.00098, 0.00001, 0.999, 0.00001],
                                 [0.00098, 0.00001, 0.00001, 0.999]])
 
-    posterior.append(model.predict_proba(X))
-    hiddenStates.append(model.predict(X))
-    score.append(model.score(X))
+    posterior = model.predict_proba(X)
+    hiddenStates = model.predict(X)
+    score = model.score(X)
+
+    figure["plot{}".format(id_tree)] = plt.figure(figsize=(15, 8))
+    ax = figure["plot{}".format(id_tree)].add_subplot(2, 1, 1)
+    ax.set_title("Internal Node" + str(target_node.index) + " -- log probability of the most likely state is  " + str(score))
+    ax.plot(hiddenStates)
+    ax.set_ylabel("Clonal - Recombination State")
+
+    ax2 = figure["plot{}".format(id_tree)].add_subplot(2, 1, 2)
+    ax2.plot(posterior[:, 0], label="ClonalFrame")
+    ax2.plot(posterior[:, 1], label="Recombination A ")
+    ax2.plot(posterior[:, 2], label="Recombination B ")
+    ax2.plot(posterior[:, 3], label="Recombination C ")
+    ax2.set_ylabel("posterior probability for each state")
+    ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
 
     tree_updatePartial = Tree.get_from_path(tree_path, 'newick')
     set_index(tree_updatePartial, dna)
@@ -388,7 +316,10 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     target_node_partial = tree_updatePartial.find_node(filter_fn=filter_fn)
     for id, child in enumerate(target_node_partial.child_node_iter()):
         if child.is_leaf():
-            # print("my beloved child:", child.index)
+            print("my beloved child:", child.index)
             new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, posterior)
 
-    print(new_partial)
+    print(new_partial[0])
+
+
+plt.show()
