@@ -410,3 +410,48 @@ def make_recombination_trees(tree_path,tree,dna,target_node , nu):
             recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)],recombined_node,nu))
     return recombination_trees
 # ============================================================================================
+def set_tips_partial(tree, alignment):
+    alignment_len = alignment.sequence_size
+    tips_num = len(alignment)
+    column = get_DNA_fromAlignment(alignment)
+    partial = np.zeros(((alignment_len, tips_num, 4)))
+    for site in range(alignment_len):
+      pos = 0
+      for node in tree.postorder_node_iter():
+        dna = column[site]
+        if node.is_leaf():
+          # print(node.index)
+          i = give_index(str(dna[pos]))
+          pos += 1
+          partial[site,node.index,i] = 1
+    return partial
+# ============================================================================================
+def computelikelihood_mixture(tree, alignment, tip_partial, model):
+    alignment_len = alignment.sequence_size
+    column = get_DNA_fromAlignment(alignment)
+    dna = column[0]
+    tips = len(dna)
+    partial = np.zeros(((alignment_len, (2 * tips) - 1, 4)))
+    partial[:, 0:tips, :] = tip_partial
+    persite_ll = []
+    for site in range(alignment_len):
+        for node in tree.postorder_node_iter():
+            if not node.is_leaf():
+                children = node.child_nodes()
+                partial[site, node.index] = np.dot(model.p_matrix(children[0].edge_length),partial[site, children[0].index])
+                for i in range(1, len(children)):
+                    partial[site, node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[site, children[i].index])
+        p = np.dot(partial[site, tree.seed_node.index], model.get_pi())
+        persite_ll.append(np.log(p))
+
+    return persite_ll, partial
+# ============================================================================================
+def make_hmm_input_mixture(tree, alignment, tip_partial, model):
+    sitell, partial = computelikelihood_mixture(tree, alignment, tip_partial, model)
+    children = tree.seed_node.child_nodes()
+    children_count = len(children)
+    x = np.zeros((alignment.sequence_size, children_count * 4))
+    for id, child in enumerate(children):
+        # print(child.index)
+        x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
+    return x
