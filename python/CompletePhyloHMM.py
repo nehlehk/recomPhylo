@@ -26,11 +26,6 @@ pi = [0.2184,0.2606,0.3265,0.1946]
 rates = [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ]
 
 
-tips_num = len(alignment)
-alignment_len = alignment.sequence_size
-
-
-taxon = tree.taxon_namespace
 nu = 0.4
 
 # ============================================= Clasees ================================================================
@@ -323,7 +318,142 @@ def give_taxon(tree,index):
 # ============================================= initial setting ========================================================
 GTR_sample = GTR_model(rates,pi)
 
+tips_num = len(alignment)
+alignment_len = alignment.sequence_size
+taxon = tree.taxon_namespace
+
+
 column = get_DNA_fromAlignment(alignment)
 dna = column[0]
 set_index(tree,alignment)
-tips = len(dna)
+# ======================================================================================================================
+
+
+mytree = []
+posterior = []
+hiddenStates = []
+score = []
+figure = {}
+tipdata = set_tips_partial(tree, alignment)
+for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_seed_node=True)):
+    print(target_node.index)
+    recombination_trees = []
+    mytree.append(Tree.get_from_path(tree_path, 'newick'))
+    set_index(mytree[id_tree], alignment)
+
+    # ----------- Step 1 : Make input for hmm ------------------------------------------------------
+    # --------------  Stetp 1.1 : re-root the tree based on the target node where the target node is each internal node of the tree.
+
+    mytree[id_tree].reroot_at_node(target_node, update_bipartitions=False, suppress_unifurcations=True)
+    recombination_trees.append(mytree[id_tree].as_string(schema="newick"))
+
+    # --------------  Step 1.2: Calculate X based on this re-rooted tree
+
+    X = make_hmm_input_mixture(mytree[id_tree], alignment, tipdata, GTR_sample)
+
+    # ----------- Step 2: make 3 recombination trees -----------------------------------------------
+    temptree = {}
+
+    for id, child in enumerate(target_node.child_node_iter()):
+        # print(child.index)
+        temptree["tree{}".format(id)] = Tree.get_from_path(tree_path, 'newick')
+        set_index(temptree["tree{}".format(id)], alignment)
+
+        filter_fn = lambda n: hasattr(n, 'index') and n.index == target_node.index
+        target_node_temp = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
+        temptree["tree{}".format(id)].reroot_at_node(target_node_temp, update_bipartitions=False,
+                                                     suppress_unifurcations=True)
+
+        filter_fn = lambda n: hasattr(n, 'index') and n.index == child.index
+        recombined_node = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
+        recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)], recombined_node, nu))
+
+    # ----------- Step 3: Call phyloHMM ----------------------------------------------------------
+    model = phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample)
+    model.startprob_ = np.array([0.985, 0.005, 0.005, 0.005])
+    model.transmat_ = np.array([[0.9997, 0.0001, 0.0001,0.0001],
+                                [0.00098, 0.999, 0.00001, 0.00001],
+                                [0.00098, 0.00001, 0.999, 0.00001],
+                                [0.00098, 0.00001, 0.00001, 0.999]])
+
+    posterior = model.predict_proba(X)
+    hiddenStates = model.predict(X)
+    score = model.score(X)
+
+    figure["plot{}".format(id_tree)] = plt.figure(figsize=(15, 8))
+    ax = figure["plot{}".format(id_tree)].add_subplot(2, 1, 1)
+    ax.set_title("Internal Node" + str(target_node.index) + " -- log probability of the most likely state is  " + str(score))
+    ax.plot(hiddenStates)
+    ax.set_ylabel("Clonal - Recombination State")
+
+    ax2 = figure["plot{}".format(id_tree)].add_subplot(2, 1, 2)
+    ax2.plot(posterior[:, 0], label="ClonalFrame")
+    ax2.plot(posterior[:, 1], label="Recombination A ")
+    ax2.plot(posterior[:, 2], label="Recombination B ")
+    ax2.plot(posterior[:, 3], label="Recombination C ")
+    ax2.set_ylabel("posterior probability for each state")
+    ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
+
+    tree_updatePartial = Tree.get_from_path(tree_path, 'newick')
+    set_index(tree_updatePartial, alignment)
+    filter_fn = lambda n: hasattr(n, 'index') and n.index == target_node.index
+    target_node_partial = tree_updatePartial.find_node(filter_fn=filter_fn)
+    for id, child in enumerate(target_node_partial.child_node_iter()):
+        if child.is_leaf():
+            # print("my beloved child:", child.index, child.taxon)
+            new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, posterior)
+
+    # print(new_partial[0])
+
+
+my_tipdata = tipdata.transpose(1, 0, 2)
+
+recom_index = []
+for i in range(my_tipdata.shape[1]):
+  for j in range(10):
+    if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
+        recom_index.append(i)
+
+
+print(ranges(recom_index))
+
+
+output = np.zeros((alignment_len, tips_num))
+for i in range(my_tipdata.shape[1]):
+  for j in range(my_tipdata.shape[0]):
+    if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
+        output[i,j] = 1
+
+
+fig = plt.figure(figsize=(15,3))
+taxa = output.shape[1]
+color=['red', 'green' ,'purple', 'blue','black']
+for i in range(taxa):
+  l = give_taxon(tree,i)
+  ax = fig.add_subplot(taxa,1,i+1)
+  ax.plot(output[:,i] ,label= l ,color = color[i%5])
+  ax.legend(loc = 1 , bbox_to_anchor=(1.03, 1.4))
+  ax.set_frame_on(False)
+  ax.axis('off')
+
+ax.axis('on')
+ax.set_yticklabels([])
+plt.show()
+
+
+# my_xml = ET.parse('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/externalRecomTemplate.xml')
+# root = my_xml.getroot()
+# data = root.find("data")
+#
+# for i in range(my_tipdata.shape[0]):
+#     x = ''
+#     c = ET.Element("sequence")
+#     c.set("taxon" , give_taxon(tree,i))
+#     c.set("uncertain" , "true")
+#     for j in range(my_tipdata.shape[1]):
+#       x = x + str(repr(my_tipdata[i,j,:]))[7:-2] + ';'
+#     c.text = '\n' + x +'\n'
+#     data.insert(i,c)
+#     c.tail = "\n"
+#
+# my_xml.write('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/externalRecomPartial.xml' ,encoding="utf-8", xml_declaration=True)
