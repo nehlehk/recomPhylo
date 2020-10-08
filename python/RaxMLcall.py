@@ -4,7 +4,7 @@ import os
 # bootstrapp = " -m GTRCAT -p 12345 -b 12345  -V -# 100 -s /home/nehleh/0_Research/PhD/Data/LL_vector/JC69_100.fasta  -n T14"
 # bipartition = " -m GTRCAT -p 12345 -f b -t RAxML_bestTree.T13 -z RAxML_bootstrap.T14 -n T15"
 
-path = "/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/"
+path = "/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/oneMilion/"
 
 help = "/home/nehleh/Documents/0_Research/Software/standard-RAxML-master/raxmlHPC -h"
 

@@ -2,6 +2,7 @@ import numpy as np
 import numpy.linalg as la
 import dendropy
 from dendropy import Tree
+import mathiue
 
 
 class GTR_model:
@@ -65,9 +66,10 @@ class GTR_model:
     #=============================================================================
 def computelikelihood(tree, dna , model):
 
+    set_index_old(tree, dna)
     tips = len(dna)
     partial = np.zeros(((2 * tips) -1, 4))
-    # set_index(tree,dna)
+
 
     pos = 0
     for node in tree.postorder_node_iter():
@@ -76,12 +78,12 @@ def computelikelihood(tree, dna , model):
             pos += 1
             partial[node.index][i] = 1
         else:
-            # print("node.index: ",node.index)
+            print("node.index: ",node.index)
             children = node.child_nodes()
-            # print("child index:" ,children[0].index , "  edge_length0 : ",children[0].edge_length)
+            print("child index:" ,children[0].index ,children[0].taxon, "  edge_length0 : ",children[0].edge_length)
             partial[node.index] = np.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
             for i in range(1, len(children)):
-                # print("child index:" ,children[i].index , "edge_length  : ", children[i].edge_length)
+                print("child index:" ,children[i].index , children[1].taxon, "edge_length  : ", children[i].edge_length)
                 partial[node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[children[i].index])
 
 
@@ -202,7 +204,7 @@ def give_index(c):
     elif c == "T":
         return 3
 #     ========================================================================
-def set_index(tree,dna):
+def set_index_old(tree,dna):
     # result = get_DNA_fromAlignment(alignment)
     # dna = result[0]
     tips = len(dna)
@@ -223,6 +225,26 @@ def set_index(tree,dna):
 
     # for node in tree.postorder_node_iter():
     #     print(node.index)
+#     =======================================================================================
+def set_index(tree, dna):
+    sequence_count = len(dna)
+
+    for node in tree.postorder_node_iter():
+        node.index = -1
+        node.annotations.add_bound_attribute("index")
+
+    s = sequence_count
+    for node in tree.postorder_node_iter():
+        if not node.is_leaf():
+            node.index = s
+            node.label = str(node.index)
+            s += 1
+        else:
+            for idx, name in enumerate(dna):
+                if str(name) == str(node.taxon):
+                    node.index = idx
+                    node.label = str(node.index)
+                    break
 #     =======================================================================================
 def get_DNA_fromAlignment(alignment):
     alignment_len = alignment.sequence_size
@@ -258,6 +280,53 @@ def wholeAlignmentLikelihood(tree, alignment , model):
 
     return LL_root , LL_partial
 
+
+def computelikelihood_new(tree, dna , model):
+    tips = len(dna)
+    partial = np.zeros(((2 * tips) -1, 4))
+
+
+    for tip in range(tips):
+      i = give_index(str(dna[tip]))
+      partial[tip][i] = 1
+
+    for node in tree.postorder_node_iter():
+        if not node.is_leaf():
+            # print("node.index: ",node.index)
+            children = node.child_nodes()
+            # print("child index:" ,children[0].index , children[0].taxon , "  edge_length0 : ",children[0].edge_length)
+            partial[node.index] = np.dot(model.p_matrix(children[0].edge_length), partial[children[0].index])
+            for i in range(1, len(children)):
+                # print("child index:" ,children[i].index  , children[i].taxon, "edge_length  : ", children[i].edge_length)
+                partial[node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[children[i].index])
+
+    p = np.dot(partial[tree.seed_node.index] , model.get_pi())
+    persite_ll = np.log(p)
+
+    return persite_ll, partial
+
+
+def wholeAlignmentLikelihood_new(tree, alignment , model):
+    '''
+    :param tree:
+    :param alignment:
+    :return: persite likelihood and partial likelihood for each site
+    '''
+    tips = len(alignment)
+    alignment_len = alignment.sequence_size
+    LL_root = np.zeros(alignment_len)
+    LL_partial = np.zeros(((alignment_len , (2*tips)-1 , 4)))
+
+    column = get_DNA_fromAlignment(alignment)
+
+    uniqueCol = list(set(column))
+    for i in range(len(uniqueCol)):
+        indexes = [id for id, x in enumerate(column) if x == uniqueCol[i]]
+        result = computelikelihood_new(tree, uniqueCol[i] , model)
+        LL_root[indexes] = result[0]
+        LL_partial[indexes,:] = result[1]
+
+    return LL_root , LL_partial
 #     =======================================================================================
 def reroot_tree(tree, nodes):
     pdm = tree.phylogenetic_distance_matrix()
@@ -272,8 +341,28 @@ def make_hmm_input(tree, alignment, model):
     children_count = len(children)
     x = np.zeros((alignment.sequence_size, children_count * 4))
     for id, child in enumerate(children):
-        # print(child.index)
+        print(child.index)
         x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
+    return x
+#     =======================================================================================
+def make_hmm_input_new(tree, alignment, model):
+    sitell, partial = wholeAlignmentLikelihood_new(tree, alignment, model)
+    children = tree.seed_node.child_nodes()
+    children_count = len(children)
+    x = np.zeros((alignment.sequence_size, children_count * 4))
+    for id, child in enumerate(children):
+        print(child.index)
+        x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
+    return x
+#     =======================================================================================
+def make_hmm_input_mathiue(tree, alignment, model):
+    sitell, partial = mathiue.compute_likelihood(tree, alignment, model)
+    children = tree.seed_node.child_nodes()
+    children_count = len(children)
+    x = np.zeros((alignment.sequence_size, children_count * 4))
+    for id, child in enumerate(children):
+        print(child.index)
+        x[:, (id * 4):((id + 1) * 4)] = partial[child.index,: , :]
     return x
 #     =======================================================================================
 def make_recombination_trees_old(tree,co_recom ,params , target_type):
@@ -410,7 +499,7 @@ def make_recombination_trees(tree_path,tree,dna,target_node , nu):
             recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)],recombined_node,nu))
     return recombination_trees
 # ============================================================================================
-def set_tips_partial(tree, alignment):
+def set_tips_partial_old(tree, alignment):
     alignment_len = alignment.sequence_size
     tips_num = len(alignment)
     column = get_DNA_fromAlignment(alignment)
@@ -424,6 +513,18 @@ def set_tips_partial(tree, alignment):
           i = give_index(str(dna[pos]))
           pos += 1
           partial[site,node.index,i] = 1
+    return partial
+# ============================================================================================
+def set_tips_partial(tree, alignment):
+    alignment_len = alignment.sequence_size
+    tips_num = len(alignment)
+    column = get_DNA_fromAlignment(alignment)
+    partial = np.zeros(((alignment_len, tips_num, 4)))
+    for tip in range(tips_num):
+      for site in range(alignment_len):
+        dna = column[site]
+        i = give_index(str(dna[tip]))
+        partial[site][tip][i] = 1
     return partial
 # ============================================================================================
 def computelikelihood_mixture(tree, alignment, tip_partial, model):
@@ -452,6 +553,35 @@ def make_hmm_input_mixture(tree, alignment, tip_partial, model):
     children_count = len(children)
     x = np.zeros((alignment.sequence_size, children_count * 4))
     for id, child in enumerate(children):
-        # print(child.index)
+        # print(child.index , child.taxon)
         x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
     return x
+# ============================================================================================
+def update_mixture_partial(alignment,tree,node,tipdata,posterior):
+  column = get_DNA_fromAlignment(alignment)
+  alignment_len = alignment.sequence_size
+  tips_num = len(alignment)
+  for site in range(alignment_len):
+    dna = column[site]
+    my_number = give_index(dna[node.index])
+    rho = give_rho(tree,node,posterior,site,tips_num)
+    for i in range(4):
+      if i == my_number:
+        tipdata[site,node.index,i] = 1
+      else:
+        tipdata[site,node.index,i] = rho
+
+  return tipdata
+
+
+def give_rho(tree, node,recom_prob,site,tips_num):
+  parent = node.parent_node
+  if parent == tree.seed_node:
+    myindex = parent.index -1
+  else:
+    myindex = parent.index
+  # node_prob = recom_prob[myindex - tips_num][site]
+  node_prob = recom_prob[site]
+  rho = 1 - node_prob[0]
+
+  return rho

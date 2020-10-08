@@ -42,6 +42,51 @@ def compute_logprob_phylo(X, recom_trees, model):
     return result
 
 
+def compute_logprob_phylo_temp(X, recom_trees, model ,alignment):
+    n, dim = X.shape
+    result = np.zeros((n, len(recom_trees)))
+    for tree_id, item in enumerate(recom_trees):
+        state_tree = dendropy.Tree.get(data=item, schema="newick")
+        myPhylo.set_index(state_tree,alignment)
+        r = myPhylo.wholeAlignmentLikelihood_new(state_tree,alignment,model)
+        result[:, tree_id] = r[0]
+
+        # children = state_tree.seed_node.child_nodes()
+        # for site_id, partial in enumerate(X):
+        #     # print("child 0:",children[0].index , children[0].taxon)
+        #     p = np.zeros(4)
+        #     p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
+        #     for i in range(1, len(children)):
+        #         # print("child i:", children[i].index , children[i].taxon)
+        #         p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
+        #     # result[site_id, tree_id] = sum(p)
+        #     # print(p)
+        #     site_l = np.dot(p, model.get_pi())
+        #     result[site_id, tree_id] = np.log(site_l)
+    return result
+
+
+
+def compute_logprob_phylo_math(X, recom_trees, model):
+    n, dim = X.shape
+    result = np.zeros((n, len(recom_trees)))
+    for tree_id, item in enumerate(recom_trees):
+        state_tree = dendropy.Tree.get(data=item, schema="newick")
+        children = state_tree.seed_node.child_nodes()
+        for site_id, partial in enumerate(X):
+            p = np.zeros(4)
+            p = np.dot(model.p_t(children[0].edge_length), partial[0:4])
+            # p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
+            for i in range(1, len(children)):
+                p *= np.dot(model.p_t(children[i].edge_length), partial[i * 4:(i + 1) * 4])
+                # p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
+            # result[site_id, tree_id] = sum(p)
+            # print(p)
+            site_l = np.dot(p, model.get_pi())
+            result[site_id, tree_id] = np.log(site_l)
+    return result
+
+
 _log = logging.getLogger(__name__)
 
 

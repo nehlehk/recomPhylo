@@ -5,14 +5,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.linalg as la
 import phyloHMM
+import xml.etree.ElementTree as ET
 
 
 
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/RAxML_bestTree.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/RAxML_bestTree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/wholegenome.fasta"), schema="fasta")
 
 
 pi = [0.2184,0.2606,0.3265,0.1946]
@@ -21,7 +22,7 @@ GTR_sample = myPhylo.GTR_model(rates,pi)
 
 column = myPhylo.get_DNA_fromAlignment(alignment)
 dna = column[0]
-myPhylo.set_index(tree,dna)
+myPhylo.set_index(tree,alignment)
 tips = len(dna)
 
 tips_num = len(alignment)
@@ -30,7 +31,7 @@ alignment_len = alignment.sequence_size
 
 print("Original tree")
 print(tree.as_string(schema='newick'))
-print(tree.as_ascii_plot())
+print(tree.as_ascii_plot(show_internal_node_labels = True))
 
 taxon = tree.taxon_namespace
 nu = 0.4
@@ -102,21 +103,24 @@ def give_index(c):
         return 3
 
 
-def set_index(tree,dna):
-    tips = len(dna)
+def set_index(tree, dna):
+    sequence_count = len(dna)
+
     for node in tree.postorder_node_iter():
-        node.index = 0
+        node.index = -1
         node.annotations.add_bound_attribute("index")
 
-    s = tips
-    for id, node in enumerate(tree.postorder_node_iter()):
+    s = sequence_count
+    for node in tree.postorder_node_iter():
         if not node.is_leaf():
             node.index = s
+            node.label = str(node.index)
             s += 1
         else:
             for idx, name in enumerate(dna):
-                if idx + 1 == int(node.taxon.label):
-                    node.index = idx + 1
+                if str(name) == str(node.taxon):
+                    node.index = idx
+                    node.label = str(node.index)
                     break
 
 
@@ -136,15 +140,11 @@ def get_DNA_fromAlignment(alignment):
 
 def set_tips_partial(tree, alignment):
     partial = np.zeros(((alignment_len, tips_num, 4)))
-    for site in range(alignment_len):
-      pos = 0
-      for node in tree.postorder_node_iter():
+    for tip in range(tips_num):
+      for site in range(alignment_len):
         dna = column[site]
-        if node.is_leaf():
-          # print(node.index)
-          i = give_index(str(dna[pos]))
-          pos += 1
-          partial[site,node.index,i] = 1
+        i = give_index(str(dna[tip]))
+        partial[site][tip][i] = 1
     return partial
 
 
@@ -238,7 +238,10 @@ def compute_logprob_phylo(X, recom_trees, model):
     return result
 
 
-
+def give_taxon(tree,index):
+  for node in tree.postorder_node_iter():
+    if node.index == index:
+        return str(node.taxon)
 
 
 
@@ -253,7 +256,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     print(target_node.index)
     recombination_trees = []
     mytree.append(Tree.get_from_path(tree_path, 'newick'))
-    set_index(mytree[id_tree], dna)
+    set_index(mytree[id_tree], alignment)
 
     # ----------- Step 1 : Make input for hmm ------------------------------------------------------
     # --------------  Stetp 1.1 : re-root the tree based on the target node where the target node is each internal node of the tree.
@@ -264,7 +267,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     # --------------  Step 1.2: Calculate X based on this re-rooted tree
 
     X = make_hmm_input_mixture(mytree[id_tree], alignment, tipdata, GTR_sample)
-    Y = myPhylo.make_hmm_input(mytree[id_tree], alignment, GTR_sample)
+    # Y = myPhylo.make_hmm_input(mytree[id_tree], alignment, GTR_sample)
     print(X.shape)
 
     # ----------- Step 2: make 3 recombination trees -----------------------------------------------
@@ -273,7 +276,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     for id, child in enumerate(target_node.child_node_iter()):
         # print(child.index)
         temptree["tree{}".format(id)] = Tree.get_from_path(tree_path, 'newick')
-        set_index(temptree["tree{}".format(id)], dna)
+        set_index(temptree["tree{}".format(id)], alignment)
 
         filter_fn = lambda n: hasattr(n, 'index') and n.index == target_node.index
         target_node_temp = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
@@ -286,8 +289,8 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
     # ----------- Step 3: Call phyloHMM ----------------------------------------------------------
     model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample)
-    model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
-    model.transmat_ = np.array([[0.997, 0.001, 0.001, 0.001],
+    model.startprob_ = np.array([0.985, 0.005, 0.005, 0.005])
+    model.transmat_ = np.array([[0.9997, 0.0001, 0.0001,0.0001],
                                 [0.00098, 0.999, 0.00001, 0.00001],
                                 [0.00098, 0.00001, 0.999, 0.00001],
                                 [0.00098, 0.00001, 0.00001, 0.999]])
@@ -311,15 +314,36 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
 
     tree_updatePartial = Tree.get_from_path(tree_path, 'newick')
-    set_index(tree_updatePartial, dna)
+    set_index(tree_updatePartial, alignment)
     filter_fn = lambda n: hasattr(n, 'index') and n.index == target_node.index
     target_node_partial = tree_updatePartial.find_node(filter_fn=filter_fn)
     for id, child in enumerate(target_node_partial.child_node_iter()):
         if child.is_leaf():
-            print("my beloved child:", child.index)
+            print("my beloved child:", child.index, child.taxon)
             new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, posterior)
 
-    print(new_partial[0])
+    # print(new_partial[0])
+
+
+tmp = tipdata.transpose(1, 0, 2)
+print(tmp.shape)
+
+my_xml = ET.parse('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/externalRecomTemplate.xml')
+root = my_xml.getroot()
+data = root.find("data")
+
+for i in range(tmp.shape[0]):
+    x = ''
+    c = ET.Element("sequence")
+    c.set("taxon" , give_taxon(tree,i))
+    c.set("uncertain" , "true")
+    for j in range(tmp.shape[1]):
+      x = x + str(repr(tmp[i,j,:]))[7:-2] + ';'
+    c.text = '\n' + x +'\n'
+    data.insert(i,c)
+    c.tail = "\n"
+
+my_xml.write('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/externalRecomPartial.xml' ,encoding="utf-8", xml_declaration=True)
 
 
 plt.show()

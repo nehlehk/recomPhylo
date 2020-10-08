@@ -71,7 +71,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
         # ----------- Step 3: Call phyloHMM -----------------------------------------------------
         model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees,  model=GTR_sample)
-        model.startprob_ = np.array([0.85, 0.05, 0.05, 0.05])
+        model.startprob_ = np.array([0.79, 0.07, 0.07, 0.07])
         model.transmat_ = np.array([[0.997, 0.001, 0.001, 0.001],
                                     [0.00098, 0.999, 0.00001, 0.00001],
                                     [0.00098, 0.00001, 0.999, 0.00001],
