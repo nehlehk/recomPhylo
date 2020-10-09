@@ -17,9 +17,9 @@ import xml.etree.ElementTree as ET
 # _log = logging.getLogger(__name__)
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/RAxML_bestTree.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/RAxML_bestTree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/wholegenome.fasta"), schema="fasta")
 
 
 pi = [0.2184,0.2606,0.3265,0.1946]
@@ -238,6 +238,28 @@ def set_tips_partial(tree, alignment):
         partial[site][tip][i] = 1
     return partial
 #     ----------------------------------
+def computelikelihood_mixture_old(tree, alignment, tip_partial, model):
+    alignment_len = alignment.sequence_size
+    tips = len(dna)
+    partial = np.zeros(((alignment_len, (2 * tips) - 1, 4)))
+    partial[:, 0:tips, :] = tip_partial
+    persite_ll = []
+
+    column = get_DNA_fromAlignment(alignment)
+    uniqueCol = list(set(column))
+
+    for site in range(alignment_len):
+        for node in tree.postorder_node_iter():
+            if not node.is_leaf():
+                children = node.child_nodes()
+                partial[site, node.index] = np.dot(model.p_matrix(children[0].edge_length),partial[site, children[0].index])
+                for i in range(1, len(children)):
+                    partial[site, node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[site, children[i].index])
+        p = np.dot(partial[site, tree.seed_node.index], model.get_pi())
+        persite_ll.append(np.log(p))
+
+    return persite_ll, partial
+#     ----------------------------------
 def computelikelihood_mixture(tree, alignment, tip_partial, model):
     alignment_len = alignment.sequence_size
     tips = len(dna)
@@ -248,11 +270,9 @@ def computelikelihood_mixture(tree, alignment, tip_partial, model):
         for node in tree.postorder_node_iter():
             if not node.is_leaf():
                 children = node.child_nodes()
-                partial[site, node.index] = np.dot(model.p_matrix(children[0].edge_length),
-                                                   partial[site, children[0].index])
+                partial[site, node.index] = np.dot(model.p_matrix(children[0].edge_length),partial[site, children[0].index])
                 for i in range(1, len(children)):
-                    partial[site, node.index] *= np.dot(model.p_matrix(children[i].edge_length),
-                                                        partial[site, children[i].index])
+                    partial[site, node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[site, children[i].index])
         p = np.dot(partial[site, tree.seed_node.index], model.get_pi())
         persite_ll.append(np.log(p))
 
@@ -328,6 +348,8 @@ dna = column[0]
 set_index(tree,alignment)
 # ======================================================================================================================
 
+print(alignment_len)
+print(tips_num)
 
 mytree = []
 posterior = []
@@ -401,44 +423,43 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     for id, child in enumerate(target_node_partial.child_node_iter()):
         if child.is_leaf():
             # print("my beloved child:", child.index, child.taxon)
-            new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, posterior)
-
-    # print(new_partial[0])
+            update_mixture_partial(alignment, tree_updatePartial, child, tipdata, posterior)
 
 
-my_tipdata = tipdata.transpose(1, 0, 2)
 
-recom_index = []
-for i in range(my_tipdata.shape[1]):
-  for j in range(10):
-    if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
-        recom_index.append(i)
-
-
-print(ranges(recom_index))
-
-
-output = np.zeros((alignment_len, tips_num))
-for i in range(my_tipdata.shape[1]):
-  for j in range(my_tipdata.shape[0]):
-    if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
-        output[i,j] = 1
-
-
-fig = plt.figure(figsize=(15,3))
-taxa = output.shape[1]
-color=['red', 'green' ,'purple', 'blue','black']
-for i in range(taxa):
-  l = give_taxon(tree,i)
-  ax = fig.add_subplot(taxa,1,i+1)
-  ax.plot(output[:,i] ,label= l ,color = color[i%5])
-  ax.legend(loc = 1 , bbox_to_anchor=(1.03, 1.4))
-  ax.set_frame_on(False)
-  ax.axis('off')
-
-ax.axis('on')
-ax.set_yticklabels([])
-plt.show()
+# my_tipdata = tipdata.transpose(1, 0, 2)
+#
+# recom_index = []
+# for i in range(my_tipdata.shape[1]):
+#   for j in range(10):
+#     if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
+#         recom_index.append(i)
+#
+#
+# print(ranges(recom_index))
+#
+#
+# output = np.zeros((alignment_len, tips_num))
+# for i in range(my_tipdata.shape[1]):
+#   for j in range(my_tipdata.shape[0]):
+#     if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
+#         output[i,j] = 1
+#
+#
+# fig = plt.figure(figsize=(15,3))
+# taxa = output.shape[1]
+# color=['red', 'green' ,'purple', 'blue','black']
+# for i in range(taxa):
+#   l = give_taxon(tree,i)
+#   ax = fig.add_subplot(taxa,1,i+1)
+#   ax.plot(output[:,i] ,label= l ,color = color[i%5])
+#   ax.legend(loc = 1 , bbox_to_anchor=(1.03, 1.4))
+#   ax.set_frame_on(False)
+#   ax.axis('off')
+#
+# ax.axis('on')
+# ax.set_yticklabels([])
+# plt.show()
 
 
 # my_xml = ET.parse('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/externalRecomTemplate.xml')
