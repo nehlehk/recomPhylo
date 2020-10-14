@@ -175,4 +175,12 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             with np.errstate(under="ignore"):
                 stats['trans'] += np.exp(log_xi_sum)
 
+        # stats = self._initialize_sufficient_statistics(self)
+        #
+        # framelogprob = compute_logprob_phylo(X,self.trees,self.model)
+        #
+        # posteriors = self._compute_posteriors()
+
+
+
 

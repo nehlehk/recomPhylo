@@ -175,15 +175,17 @@ def compute_logprob_phylo(X, recom_trees, model):
     for tree_id, item in enumerate(recom_trees):
         state_tree = dendropy.Tree.get(data=item, schema="newick")
         children = state_tree.seed_node.child_nodes()
-        for site_id, partial in enumerate(X):
+
+        uniqueX = np.unique(X, axis=0)
+        for uniq_id, partial in enumerate(uniqueX):
+            indexes = []
+            indexes = [id for id, x in enumerate(X) if (x == uniqueX[uniq_id]).all()]
             p = np.zeros(4)
             p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
             for i in range(1, len(children)):
                 p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
-            # result[site_id, tree_id] = sum(p)
-            # print(p)
             site_l = np.dot(p, model.get_pi())
-            result[site_id, tree_id] = np.log(site_l)
+            result[indexes, tree_id] = np.log(site_l)
     return result
 #     ----------------------------------
 def give_index(c):
@@ -238,43 +240,31 @@ def set_tips_partial(tree, alignment):
         partial[site][tip][i] = 1
     return partial
 #     ----------------------------------
-def computelikelihood_mixture_old(tree, alignment, tip_partial, model):
+def computelikelihood_mixture(tree, alignment ,tip_partial, model):
     alignment_len = alignment.sequence_size
     tips = len(dna)
-    partial = np.zeros(((alignment_len, (2 * tips) - 1, 4)))
-    partial[:, 0:tips, :] = tip_partial
-    persite_ll = []
+    partial = np.zeros(((alignment_len,(2 * tips) -1, 4)))
+    partial[:,0:tips,:] = tip_partial
+    persite_ll = np.zeros(alignment_len)
+
 
     column = get_DNA_fromAlignment(alignment)
+
     uniqueCol = list(set(column))
+    for u in range(len(uniqueCol)):
+      indexes = []
+      indexes = [id for id, x in enumerate(column) if x == uniqueCol[u]]
+      site = indexes[0]
+      for node in tree.postorder_node_iter():
+          if not node.is_leaf():
+              children = node.child_nodes()
+              partial[site,node.index] = np.dot(model.p_matrix(children[0].edge_length), partial[site,children[0].index])
+              for i in range(1, len(children)):
+                  partial[site, node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[site,children[i].index])
+      partial[indexes,:,:] = partial[site,:,:]
+      p = np.dot(partial[site,tree.seed_node.index] , model.get_pi())
+      persite_ll[indexes] = np.log(p)
 
-    for site in range(alignment_len):
-        for node in tree.postorder_node_iter():
-            if not node.is_leaf():
-                children = node.child_nodes()
-                partial[site, node.index] = np.dot(model.p_matrix(children[0].edge_length),partial[site, children[0].index])
-                for i in range(1, len(children)):
-                    partial[site, node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[site, children[i].index])
-        p = np.dot(partial[site, tree.seed_node.index], model.get_pi())
-        persite_ll.append(np.log(p))
-
-    return persite_ll, partial
-#     ----------------------------------
-def computelikelihood_mixture(tree, alignment, tip_partial, model):
-    alignment_len = alignment.sequence_size
-    tips = len(dna)
-    partial = np.zeros(((alignment_len, (2 * tips) - 1, 4)))
-    partial[:, 0:tips, :] = tip_partial
-    persite_ll = []
-    for site in range(alignment_len):
-        for node in tree.postorder_node_iter():
-            if not node.is_leaf():
-                children = node.child_nodes()
-                partial[site, node.index] = np.dot(model.p_matrix(children[0].edge_length),partial[site, children[0].index])
-                for i in range(1, len(children)):
-                    partial[site, node.index] *= np.dot(model.p_matrix(children[i].edge_length),partial[site, children[i].index])
-        p = np.dot(partial[site, tree.seed_node.index], model.get_pi())
-        persite_ll.append(np.log(p))
 
     return persite_ll, partial
 #     ----------------------------------
