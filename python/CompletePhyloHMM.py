@@ -17,9 +17,9 @@ import xml.etree.ElementTree as ET
 # _log = logging.getLogger(__name__)
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/RAxML_bestTree.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/oneMilion/RAxML_bestTree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/oneMilion/wholegenome.fasta"), schema="fasta")
 
 
 pi = [0.2184,0.2606,0.3265,0.1946]
@@ -27,6 +27,7 @@ rates = [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ]
 
 
 nu = 0.4
+mix_prob = 0.8
 
 # ============================================= Clasees ================================================================
 class GTR_model:
@@ -338,8 +339,6 @@ dna = column[0]
 set_index(tree,alignment)
 # ======================================================================================================================
 
-print(alignment_len)
-print(tips_num)
 
 mytree = []
 posterior = []
@@ -417,54 +416,60 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
 
 
-# my_tipdata = tipdata.transpose(1, 0, 2)
-#
-# recom_index = []
-# for i in range(my_tipdata.shape[1]):
-#   for j in range(10):
-#     if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
-#         recom_index.append(i)
-#
-#
-# print(ranges(recom_index))
-#
-#
-# output = np.zeros((alignment_len, tips_num))
-# for i in range(my_tipdata.shape[1]):
-#   for j in range(my_tipdata.shape[0]):
-#     if ((my_tipdata[j,i,0] > 0.8) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > 0.8) and (my_tipdata[j,i,1] < 1.0)):
-#         output[i,j] = 1
-#
-#
-# fig = plt.figure(figsize=(15,3))
-# taxa = output.shape[1]
-# color=['red', 'green' ,'purple', 'blue','black']
-# for i in range(taxa):
-#   l = give_taxon(tree,i)
-#   ax = fig.add_subplot(taxa,1,i+1)
-#   ax.plot(output[:,i] ,label= l ,color = color[i%5])
-#   ax.legend(loc = 1 , bbox_to_anchor=(1.03, 1.4))
-#   ax.set_frame_on(False)
-#   ax.axis('off')
-#
-# ax.axis('on')
-# ax.set_yticklabels([])
-# plt.show()
 
 
-# my_xml = ET.parse('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/externalRecomTemplate.xml')
-# root = my_xml.getroot()
-# data = root.find("data")
-#
-# for i in range(my_tipdata.shape[0]):
-#     x = ''
-#     c = ET.Element("sequence")
-#     c.set("taxon" , give_taxon(tree,i))
-#     c.set("uncertain" , "true")
-#     for j in range(my_tipdata.shape[1]):
-#       x = x + str(repr(my_tipdata[i,j,:]))[7:-2] + ';'
-#     c.text = '\n' + x +'\n'
-#     data.insert(i,c)
-#     c.tail = "\n"
-#
-# my_xml.write('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/externalRecom/externalRecomPartial.xml' ,encoding="utf-8", xml_declaration=True)
+my_tipdata = tipdata.transpose(1, 0, 2)
+
+recom_index = []
+for i in range(my_tipdata.shape[1]):
+  for j in range(10):
+    if ((my_tipdata[j,i,0] > mix_prob) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > mix_prob) and (my_tipdata[j,i,1] < 1.0)):
+        recom_index.append(i)
+
+
+print(ranges(recom_index))
+
+
+output = np.zeros((alignment_len, tips_num))
+for i in range(my_tipdata.shape[1]):
+  for j in range(my_tipdata.shape[0]):
+    if ((my_tipdata[j,i,0] > mix_prob) and (my_tipdata[j,i,0] < 1.0)) or ((my_tipdata[j,i,1] > mix_prob) and (my_tipdata[j,i,1] < 1.0)):
+        output[i,j] = 1
+
+
+fig = plt.figure(figsize=(15,3))
+taxa = output.shape[1]
+color=['red', 'green' ,'purple', 'blue','black']
+for i in range(taxa):
+  l = give_taxon(tree,i)
+  ax = fig.add_subplot(taxa,1,i+1)
+  ax.plot(output[:,i] ,label= l ,color = color[i%5])
+  ax.legend(loc = 1 , bbox_to_anchor=(1.03, 1.4))
+  ax.set_frame_on(False)
+  ax.axis('off')
+
+ax.axis('on')
+ax.set_yticklabels([])
+plt.show()
+
+
+my_xml = ET.parse('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/oneMilion/TemplateOneMilion.xml')
+root = my_xml.getroot()
+data = root.find("data")
+
+for i in range(my_tipdata.shape[0]):
+    x = ''
+    c = ET.Element("sequence")
+    c.set("taxon" , give_taxon(tree,i))
+    c.set("uncertain" , "true")
+    for j in range(my_tipdata.shape[1]):
+      x = x + str(repr(my_tipdata[i,j,:]))[7:-2] + ';'
+    c.text = '\n' + x +'\n'
+    data.insert(i,c)
+    c.tail = "\n"
+
+my_xml.write('/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/oneMilion/oneMilionPartial.xml' ,encoding="utf-8", xml_declaration=True)
+
+
+
+tree.update_bipartitions(suppress_unifurcations=False)

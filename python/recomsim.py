@@ -1,27 +1,28 @@
 import os
 
 seq_count = '10'
-seqnum = '1000000'
+seqnum = '5000'
 # =====================================  fastsimbactree ====================================
 
-fastsimbac = "/home/nehleh/Documents/anaconda3/pkgs/fastsimbac-1.0.1_bd3ad13d8f79-h6dcb523_0/bin/fastSimBac  "
-
-paramfast = seq_count + "  " + seqnum + " -T -t .001 -r 0.00001 2000  -x 0 0 > /home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/test/fastsimbactrees.txt"
-
-cmdfastsimbac = fastsimbac + paramfast
-print(cmdfastsimbac)
-os.system(cmdfastsimbac)
+# fastsimbac = "/home/nehleh/Documents/anaconda3/pkgs/fastsimbac-1.0.1_bd3ad13d8f79-h6dcb523_0/bin/fastSimBac  "
+#
+# # paramfast = seq_count + "  " + seqnum + " -T -t .001 -r 0 0  -x 0.0005 100  −I 20 100 0.0 −ej 20.0 1 2 > /home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/test/fastsimbactrees.txt"
+# paramfast = seq_count + "  " + seqnum + " -T -t .001 -r 0 0 -x 0.0001 1000 -I 2 0 6 -ej 20 1 2 -d > /home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/test/fastsimbactrees.txt"
+#
+# cmdfastsimbac = fastsimbac + paramfast
+# print(cmdfastsimbac)
+# os.system(cmdfastsimbac)
 
 # =====================================  prepare tree for seq-gen ====================================
-f = open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/test/fastsimbactrees.txt", "r")
+# f = open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/test/fastsimbactrees.txt", "r")
 treefile= "/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/test/tree.tree"
-partition = 4
-for line in f:
-    if  line.find('[') == 0:
-        partition += 1
-        fi = open(treefile, "a")
-        fi.write(line)
-        fi.close()
+partition = 11
+# for line in f:
+#     if  line.find('[') == 0:
+#         partition += 1
+#         fi = open(treefile, "a")
+#         fi.write(line)
+#         fi.close()
 
 # =====================================  seqgen ====================================
 model = 'GTR'

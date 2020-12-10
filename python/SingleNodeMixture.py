@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/RAxML_bestTree.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/internalRecom/RAxML_bestTree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/ShortDataset/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/internalRecom/wholegenome.fasta"), schema="fasta")
 
 
 pi = [0.317, 0.183 ,0.367 ,0.133]
