@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 
 
 # ==============================================   input  ==============================================================
-tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/internalRecom/RAxML_bestTree.tree'
+tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/BaciSim/1/RAxML_bestTree.tree'
 tree = Tree.get_from_path(tree_path, 'newick')
-alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/recombination/internalRecom/wholegenome.fasta"), schema="fasta")
+alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/BaciSim/1/wholegenome.fasta"), schema="fasta")
 
 
-pi = [0.317, 0.183 ,0.367 ,0.133]
-rates = [0.000100, 0.636612 ,2.547706, 0.000100 ,2.151395]
+pi = [0.2184,0.2606,0.3265,0.1946]
+rates = [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ]
 GTR_sample = myPhylo.GTR_model(rates,pi)
 
 
@@ -24,7 +24,7 @@ myPhylo.set_index(tree,alignment)
 
 
 taxon = tree.taxon_namespace
-nu = 0.4
+nu = 0.03
 
 print(alignment.sequence_size)
 
