@@ -7,17 +7,26 @@ import dendropy
 
 
 
-def compute_logprob_phylo(X, recom_trees, model):
+def compute_logprob_phylo(X, recom_trees, model,child_order,recom_child_order):
     n, dim = X.shape
     result = np.zeros((n, len(recom_trees)))
     for tree_id, item in enumerate(recom_trees):
         state_tree = dendropy.Tree.get(data=item, schema="newick")
+        # print(state_tree)
         children = state_tree.seed_node.child_nodes()
+        print("---------------------------",tree_id)
+        print(child_order.index(recom_child_order[tree_id * len(children)]))
+        print(child_order.index(recom_child_order[(tree_id* len(children)) + 1]))
+        print(child_order.index(recom_child_order[(tree_id * len(children)) + 2]))
         for site_id, partial in enumerate(X):
+            order = child_order.index(recom_child_order[tree_id * len(children)])
             p = np.zeros(4)
-            p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
+            # p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
+            p = np.dot(model.p_matrix(children[0].edge_length), partial[order * 4:(order + 1) * 4])
             for i in range(1, len(children)):
-                p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
+                # p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
+                order = child_order.index(recom_child_order[(tree_id* len(children)) + i])
+                p *= np.dot(model.p_matrix(children[i].edge_length), partial[order * 4:(order + 1) * 4])
             # result[site_id, tree_id] = sum(p)
             # print(p)
             site_l = np.dot(p, model.get_pi())
@@ -29,11 +38,14 @@ _log = logging.getLogger(__name__)
 
 
 
+
 class phyloLL_HMM(hmmlearn.base._BaseHMM):
-    def __init__(self, n_components, trees, model):
+    def __init__(self, n_components, trees, model ,child_order,recom_child_order):
         super().__init__(n_components)
         self.trees = trees
         self.model = model
+        self.child_order = child_order
+        self.recom_child_order = recom_child_order
 
     def _init(self, X, lengths):
 
@@ -104,7 +116,7 @@ class phyloLL_HMM(hmmlearn.base._BaseHMM):
             model states.
         """
 
-        return compute_logprob_phylo(X, self.trees, self.model)
+        return compute_logprob_phylo(X, self.trees, self.model, self.child_order, self.recom_child_order)
 
 #     ==========================================================================
     def _initialize_sufficient_statistics(self):

@@ -176,7 +176,7 @@ def make_hmm_input_mixture(tree, alignment, tip_partial, model):
     children_count = len(children)
     x = np.zeros((alignment.sequence_size, children_count * 4))
     for id, child in enumerate(children):
-        # print(child.index)
+        print(child.index)
         x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
     return x
 
@@ -221,26 +221,6 @@ def give_rho(node,recom_prob,site,tips_num,node_order):
   return rho
 
 
-def compute_logprob_phylo(X, recom_trees, model):
-    n, dim = X.shape
-    result = np.zeros((n, len(recom_trees)))
-    for tree_id, item in enumerate(recom_trees):
-        state_tree = dendropy.Tree.get(data=item, schema="newick")
-        print(state_tree)
-        children = state_tree.seed_node.child_nodes()
-        for site_id, partial in enumerate(X):
-            p = np.zeros(4)
-            p = np.dot(model.p_matrix(children[0].edge_length), partial[0:4])
-            for i in range(1, len(children)):
-                p *= np.dot(model.p_matrix(children[i].edge_length), partial[i * 4:(i + 1) * 4])
-            # result[site_id, tree_id] = sum(p)
-            # print(p)
-            site_l = np.dot(p, model.get_pi())
-            result[site_id, tree_id] = np.log(site_l)
-    return result
-
-
-
 def give_taxon(tree,index):
   for node in tree.postorder_node_iter():
     if node.index == index:
@@ -259,6 +239,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
     print(target_node.index)
     recombination_trees = []
     child_order = []
+
     mytree.append(Tree.get_from_path(tree_path, 'newick'))
     set_index(mytree[id_tree], alignment)
 
@@ -272,10 +253,14 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
     X = make_hmm_input_mixture(mytree[id_tree], alignment, tipdata, GTR_sample)
     # Y = myPhylo.make_hmm_input(mytree[id_tree], alignment, GTR_sample)
-    print(X[4400])
+    print(X[4500])
 
     # ----------- Step 2: make 3 recombination trees -----------------------------------------------
     temptree = {}
+    recom_child_order = []
+
+    for id, child in enumerate(target_node.child_node_iter()):
+        recom_child_order.append(child.index)
 
     for id, child in enumerate(target_node.child_node_iter()):
         # print(child.index)
@@ -287,15 +272,18 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
         temptree["tree{}".format(id)].reroot_at_node(target_node_temp, update_bipartitions=False,
                                                      suppress_unifurcations=True)
 
+        kids =temptree["tree{}".format(id)].seed_node.child_nodes()
+        for kid in kids:
+            recom_child_order.append(kid.index)
         filter_fn = lambda n: hasattr(n, 'index') and n.index == child.index
         recombined_node = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
         recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)], recombined_node, nu))
         child_order.append(recombined_node.index)
 
     print(child_order)
-
+    print(recom_child_order)
     # ----------- Step 3: Call phyloHMM ----------------------------------------------------------
-    model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample)
+    model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample , child_order=child_order , recom_child_order = recom_child_order)
     model.startprob_ = np.array([0.6, 0.13, 0.13, 0.14])
     model.transmat_ = np.array([[0.9997, 0.0001, 0.0001, 0.0001],
                               [0.001, 0.997, 0.001, 0.001],
@@ -305,14 +293,14 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
     p = model.predict_proba(X)
     print("posterior:")
-    print(p[4400])
+    print(p[4500])
     # posterior = model.predict_proba(X)
     # hiddenStates = model.predict(X)
     # score = model.score(X)
 
     posterior.append(p)
-    hiddenStates.append(model.predict(X))
-    score.append(model.score(X))
+    # hiddenStates.append(model.predict(X))
+    # score.append(model.score(X))
 
     # figure["plot{}".format(id_tree)] = plt.figure(figsize=(15, 8))
     # ax = figure["plot{}".format(id_tree)].add_subplot(2, 1, 1)
@@ -339,7 +327,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
             print("my beloved child:", child.index, child.taxon, "order:", order + 1)
             new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, p ,order+1)
 
-    # print(new_partial[0])
+    # print(new_partial[4500])
 
 
 # tmp = tipdata.transpose(1, 0, 2)
