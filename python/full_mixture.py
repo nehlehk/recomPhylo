@@ -176,7 +176,7 @@ def make_hmm_input_mixture(tree, alignment, tip_partial, model):
     children_count = len(children)
     x = np.zeros((alignment.sequence_size, children_count * 4))
     for id, child in enumerate(children):
-        print(child.index)
+        # print(child.index)
         x[:, (id * 4):((id + 1) * 4)] = partial[:, child.index, :]
     return x
 
@@ -253,13 +253,13 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
     X = make_hmm_input_mixture(mytree[id_tree], alignment, tipdata, GTR_sample)
     # Y = myPhylo.make_hmm_input(mytree[id_tree], alignment, GTR_sample)
-    print(X[4500])
+    # print(X[4500])
 
     # ----------- Step 2: make 3 recombination trees -----------------------------------------------
     temptree = {}
     recom_child_order = []
 
-    for id, child in enumerate(target_node.child_node_iter()):
+    for id, child in enumerate(target_node.child_node_iter()): # to keep the order of clonal tree children
         recom_child_order.append(child.index)
 
     for id, child in enumerate(target_node.child_node_iter()):
@@ -272,16 +272,17 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
         temptree["tree{}".format(id)].reroot_at_node(target_node_temp, update_bipartitions=False,
                                                      suppress_unifurcations=True)
 
-        kids =temptree["tree{}".format(id)].seed_node.child_nodes()
+        kids =temptree["tree{}".format(id)].seed_node.child_nodes() # to keep the order of recombination trees children
         for kid in kids:
             recom_child_order.append(kid.index)
+
         filter_fn = lambda n: hasattr(n, 'index') and n.index == child.index
         recombined_node = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
         recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)], recombined_node, nu))
-        child_order.append(recombined_node.index)
+        child_order.append(recombined_node.index) # keep the order of X
 
-    print(child_order)
-    print(recom_child_order)
+    # print(child_order)
+    # print(recom_child_order)
     # ----------- Step 3: Call phyloHMM ----------------------------------------------------------
     model = phyloHMM.phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample , child_order=child_order , recom_child_order = recom_child_order)
     model.startprob_ = np.array([0.6, 0.13, 0.13, 0.14])
@@ -292,29 +293,29 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
 
 
     p = model.predict_proba(X)
-    print("posterior:")
-    print(p[4500])
+    # print("posterior:")
+    # print(p[4500])
     # posterior = model.predict_proba(X)
     # hiddenStates = model.predict(X)
     # score = model.score(X)
 
     posterior.append(p)
-    # hiddenStates.append(model.predict(X))
-    # score.append(model.score(X))
+    hiddenStates.append(model.predict(X))
+    score.append(model.score(X))
 
-    # figure["plot{}".format(id_tree)] = plt.figure(figsize=(15, 8))
-    # ax = figure["plot{}".format(id_tree)].add_subplot(2, 1, 1)
-    # ax.set_title("Internal Node" + str(target_node.index) + " -- log probability of the most likely state is  " + str(score))
-    # ax.plot(hiddenStates)
-    # ax.set_ylabel("Clonal - Recombination State")
-    #
-    # ax2 = figure["plot{}".format(id_tree)].add_subplot(2, 1, 2)
-    # ax2.plot(posterior[:, 0], label="ClonalFrame")
-    # ax2.plot(posterior[:, 1], label="Recombination A ")
-    # ax2.plot(posterior[:, 2], label="Recombination B ")
-    # ax2.plot(posterior[:, 3], label="Recombination C ")
-    # ax2.set_ylabel("posterior probability for each state")
-    # ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
+    figure["plot{}".format(id_tree)] = plt.figure(figsize=(15, 8))
+    ax = figure["plot{}".format(id_tree)].add_subplot(2, 1, 1)
+    ax.set_title("Internal Node" + str(target_node.index) + " -- log probability of the most likely state is  " + str(score[id_tree]))
+    ax.plot(hiddenStates[id_tree])
+    ax.set_ylabel("Clonal - Recombination State")
+
+    ax2 = figure["plot{}".format(id_tree)].add_subplot(2, 1, 2)
+    ax2.plot(p[:, 0], label="ClonalFrame")
+    ax2.plot(p[:, 1], label="Recombination A ")
+    ax2.plot(p[:, 2], label="Recombination B ")
+    ax2.plot(p[:, 3], label="Recombination C ")
+    ax2.set_ylabel("posterior probability for each state")
+    ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
 
     tree_updatePartial = Tree.get_from_path(tree_path, 'newick')
     set_index(tree_updatePartial, alignment)
@@ -324,7 +325,7 @@ for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_
         if child.is_leaf():
             order = child_order.index(child.index)
             # order = id
-            print("my beloved child:", child.index, child.taxon, "order:", order + 1)
+            # print("my beloved child:", child.index, child.taxon, "order:", order + 1)
             new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, p ,order+1)
 
     # print(new_partial[4500])

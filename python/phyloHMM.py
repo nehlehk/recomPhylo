@@ -12,12 +12,7 @@ def compute_logprob_phylo(X, recom_trees, model,child_order,recom_child_order):
     result = np.zeros((n, len(recom_trees)))
     for tree_id, item in enumerate(recom_trees):
         state_tree = dendropy.Tree.get(data=item, schema="newick")
-        # print(state_tree)
         children = state_tree.seed_node.child_nodes()
-        print("---------------------------",tree_id)
-        print(child_order.index(recom_child_order[tree_id * len(children)]))
-        print(child_order.index(recom_child_order[(tree_id* len(children)) + 1]))
-        print(child_order.index(recom_child_order[(tree_id * len(children)) + 2]))
         for site_id, partial in enumerate(X):
             order = child_order.index(recom_child_order[tree_id * len(children)])
             p = np.zeros(4)
