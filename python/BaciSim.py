@@ -37,7 +37,7 @@ recom_rate = .05
 max_tMRCA= 0.01
 nu_ex = 0.2
 # nu_in = 0.1
-internal = 1
+internal = 0
 leaf = 1
 
 taxon_list= []
@@ -158,7 +158,6 @@ def give_descendents(tree,node_index,result):
       else:
         result.add(r_node)
   return result
-
 # ----------------------------------------------------------------------------------------------------------------------
 def give_equivalent_node_byedge(recomtree):
   e = []
@@ -295,6 +294,7 @@ def my_merge_trees(recomtrees , recomnodes):
       attached_node.add_child(newborn)
 
   return maintree.as_string(schema="newick")
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 set_index(tree)
@@ -358,9 +358,9 @@ for i in range(nodes_number):
       output[s:e,i] = 1
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-fig ='red', plt.figure(figsize=(15,7))
-color=[ 'green' ,'purple', 'blue','black']
+
+fig = plt.figure(figsize=(10,5))
+color=['red', 'green' ,'purple', 'blue','black']
 clonaltree = Tree.get_from_string(clonal_tree,schema='newick')
 set_index(clonaltree)
 for i in range(nodes_number):
@@ -371,14 +371,14 @@ for i in range(nodes_number):
     ax.plot(output[:,i] ,label= str(i)+' is mrca:'+ str(d) ,color = color[i%5])
   else:
     ax.plot(output[:,i] ,label= i ,color = color[i%5])
-  ax.legend(loc = 1 , bbox_to_anchor=(1.25, 1.3))
+  ax.legend(loc = 2 , bbox_to_anchor=(0.95, 1.5))
   ax.set_frame_on(False)
   ax.axis('off')
 
 ax.axis('on')
 ax.set_yticklabels([])
 plt.savefig("Recombination_fig.jpeg")
-plt.show()
+
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -451,18 +451,18 @@ print(final)
 final[['nodes','start','end', 'len' ,'descendants', 'status']].to_csv('BaciSim_Log.txt', sep='\t' , header= True)
 
 # ----------------------------------------------------------------------------------------------------------------------
-myfile = open('./BaciSimTrees.tree', 'w')
-total = 0
-for id in range(len(final)):
-  if len(final['final_tree'][id]) == 1:
-    end_tree = remove_internal_labels(final['final_tree'][id][0])
-  else:
-    end_tree = remove_internal_labels(final['final_tree'][id])
-  tmp = "["+str(final['len'][id])+"]"+" " +end_tree
-  print(tmp)
-  myfile.write("%s\n" % tmp)
-
-myfile.close()
+# myfile = open('./BaciSimTrees.tree', 'w')
+# total = 0
+# for id in range(len(final)):
+#   if len(final['final_tree'][id]) == 1:
+#     end_tree = remove_internal_labels(final['final_tree'][id][0])
+#   else:
+#     end_tree = remove_internal_labels(final['final_tree'][id])
+#   tmp = "["+str(final['len'][id])+"]"+" " +end_tree
+#   print(tmp)
+#   myfile.write("%s\n" % tmp)
+#
+# myfile.close()
 # ----------------------------------------------------------------------------------------------------------------------
 def common_nodes(clonaltree,overlap_nodes):
   kids = []
@@ -607,28 +607,58 @@ def resolve_conflict(clonaltree, recomtrees, recomnodes):
                 parent = prunenode.parent_node
                 print("parent")
                 print(parent)
-                if ((recomnode.edge_length) < maintree.max_distance_from_root()):
-                    print(" *********** Stage Two ***********")
+
+                if ((recomnode.edge_length) > parent.distance_from_tip()) and ((recomnode.edge_length) < tree.max_distance_from_root()):
                     ancestor = []
-                    attached_id = 0
                     for id, tmp_node in enumerate(prunenode.ancestor_iter()):
-                        # print(temp_node)
                         ancestor.append(tmp_node)
+                        # print(id ,"::::::",tmp_node.index)
                         if recomnode.edge_length < tmp_node.distance_from_tip():
                             attached_node = tmp_node
                             attached_id = id
+                            # print(attached_node.index)
                             break
 
-                print(attached_id)
+                    relocated_nodes = ancestor[attached_id - 1]  # relocated node is the adjacent node of recombinant node
+                    parent.remove_child(node)  # the original recombinant node was removed to reinsert in the other side
+                    attached_node.remove_child(relocated_nodes)  # relocated node was removed to reinsert in to right side
+                    newborn = dendropy.datamodel.treemodel.Node()  # newborn in the new mrca of recombinant node and its sister
+                    # newborn.edge_length = attached_node.distance_from_tip() - recom_length
+                    # node.edge_length = recom_length
+                    newborn.add_child(node)
+                    relocated_nodes.edge_length = relocated_nodes.edge_length - newborn.edge_length
+                    newborn.add_child(relocated_nodes)
+                    attached_node.add_child(newborn)
+                    print(maintree.as_string(schema="newick"))
+
+
+
+
+
+
+
+                # if ((recomnode.edge_length) < maintree.max_distance_from_root()):
+                #     print(" *********** Stage Two ***********")
+                #     ancestor = []
+                #     attached_id = 0
+                #     for id, tmp_node in enumerate(prunenode.ancestor_iter()):
+                #         # print(temp_node)
+                #         ancestor.append(tmp_node)
+                #         if recomnode.edge_length < tmp_node.distance_from_tip():
+                #             attached_node = tmp_node
+                #             attached_id = id
+                #             break
+
+
 
                 # if attached_id == 0 :
                 #   parent.remove_child(prunenode)
                 # else:
 
-                if (int(recomnode.index) < tips_number):
-                    print("step child")
+                # if (int(recomnode.index) < tips_number):
+                    # print("step child")
                     #   relocated_nodes = ancestor[attached_id-1]  # relocated node is the adjacent node of recombinant node
-                    maintree.prune_subtree(prunenode) # the original recombinant node was removed to reinsert in the other side
+                    # maintree.prune_subtree(prunenode) # the original recombinant node was removed to reinsert in the other side
                     #   attached_node.remove_child(relocated_nodes) # relocated node was removed to reinsert in to right side
                     #   newborn = dendropy.datamodel.treemodel.Node()  # newborn in the new mrca of recombinant node and its sister
                     #   newborn.add_child(prunenode)
@@ -876,3 +906,4 @@ def resolve_parent_nodes(s_equ, tree, temptree):
 
     return desc
 # ----------------------------------------------------------------------------------------------------------------------
+plt.show()
