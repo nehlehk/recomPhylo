@@ -264,9 +264,6 @@ def give_rho(node,recom_prob,site,tips_num,node_order):
     myindex = parent.index -1
   else:
     myindex = parent.index
-  # node_prob = recom_prob[myindex - tips_num][site]
-  # node_prob = recom_prob[site]
-  # rho = 1 - node_prob[0]
   rho = recom_prob[site][node_order]
   return rho
 # **********************************************************************************************************************
@@ -320,8 +317,84 @@ def compute_logprob_phylo(X, recom_trees, model,child_order,recom_child_order):
             result[site_id, tree_id] = np.log(site_l)
     return result
 # **********************************************************************************************************************
+def phylohmm(tree,alignment,nu):
+    mytree = []
+    posterior = []
+    hiddenStates = []
+    score = []
+    tipdata = set_tips_partial(tree, alignment)
+    for id_tree, target_node in enumerate(tree.postorder_internal_node_iter(exclude_seed_node=True)):
+        # print(target_node.index)
+        recombination_trees = []
+        child_order = []
+        mytree.append(Tree.get_from_path(tree_path, 'newick'))
+        set_index(mytree[id_tree], alignment)
+
+        # ----------- Step 1 : Make input for hmm ------------------------------------------------------
+        # --------------  Stetp 1.1 : re-root the tree based on the target node where the target node is each internal node of the tree.
+
+        mytree[id_tree].reroot_at_node(target_node, update_bipartitions=False, suppress_unifurcations=True)
+        recombination_trees.append(mytree[id_tree].as_string(schema="newick"))
+
+        # --------------  Step 1.2: Calculate X based on this re-rooted tree
+        X = make_hmm_input_mixture(mytree[id_tree], alignment, tipdata, GTR_sample)
 
 
+        # ----------- Step 2: make recombination trees -----------------------------------------------
+        temptree = {}
+        recom_child_order = []
+
+        for id, child in enumerate(target_node.child_node_iter()):  # to keep the order of clonal tree children
+            recom_child_order.append(child.index)
+
+        for id, child in enumerate(target_node.child_node_iter()):
+            # print(child.index)
+            temptree["tree{}".format(id)] = Tree.get_from_path(tree_path, 'newick')
+            set_index(temptree["tree{}".format(id)], alignment)
+
+            filter_fn = lambda n: hasattr(n, 'index') and n.index == target_node.index
+            target_node_temp = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
+            temptree["tree{}".format(id)].reroot_at_node(target_node_temp, update_bipartitions=False,suppress_unifurcations=True)
+
+            kids = temptree["tree{}".format(id)].seed_node.child_nodes()  # to keep the order of recombination trees children
+            for kid in kids:
+                recom_child_order.append(kid.index)
+
+            filter_fn = lambda n: hasattr(n, 'index') and n.index == child.index
+            recombined_node = temptree["tree{}".format(id)].find_node(filter_fn=filter_fn)
+            recombination_trees.append(tree_evolver_rerooted(temptree["tree{}".format(id)], recombined_node, nu))
+            child_order.append(recombined_node.index)
+
+
+        # ----------- Step 3: Call phyloHMM -----------------------------------------------------
+
+        model = phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample, child_order=child_order,
+                            recom_child_order=recom_child_order)
+        model.startprob_ = np.array([0.6, 0.13, 0.13, 0.14])
+        model.transmat_ = np.array([[0.9997, 0.0001, 0.0001, 0.0001],
+                                    [0.001, 0.997, 0.001, 0.001],
+                                    [0.001, 0.001, 0.997, 0.001],
+                                    [0.001, 0.001, 0.001, 0.997]])
+
+        p = model.predict_proba(X)
+
+        posterior.append(p)
+        hiddenStates.append(model.predict(X))
+        score.append(model.score(X))
+
+        tree_updatePartial = Tree.get_from_path(tree_path, 'newick')
+        set_index(tree_updatePartial, alignment)
+        filter_fn = lambda n: hasattr(n, 'index') and n.index == target_node.index
+        target_node_partial = tree_updatePartial.find_node(filter_fn=filter_fn)
+        for id, child in enumerate(target_node_partial.child_node_iter()):
+            # print(child.index)
+            if child.is_leaf():
+                order = child_order.index(child.index)
+                # print("my beloved child:", child.index , child.taxon , "order:" , order+1)
+                new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, p, order + 1)
+
+        return new_partial,posterior,hiddenStates,score
+# **********************************************************************************************************************
 
 
 
@@ -330,34 +403,34 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser(description='''You did not specify any parameters.''')
-    parser.add_argument('-t', "--treeFile", type=string, required= True, help='tree')
-    parser.add_argument('-a', "--alignmentFile", type=string, required= True , help='fasta file')
+    parser.add_argument('-t', "--treeFile", type=str, required= True, help='tree')
+    parser.add_argument('-a', "--alignmentFile", type=str, required= True , help='fasta file')
+    parser.add_argument('-nu', "--nuHmm", type=float,  required= True,default=0.03,help='nuHmm')
     parser.add_argument('-f', "--frequencies", type=list, default= [0.2184,0.2606,0.3265,0.1946],help='frequencies')
     parser.add_argument('-r', "--rates", type=list, default= [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ], help='rates')
     args = parser.parse_args()
 
     tree_path = args.treeFile
+    genomefile = args.alignmentFile
     pi = args.frequencies
     rates = args.rates
-    genomefile = args.alignmentFile
-
+    nu = args.nuHmm
 
 
 
 
     tree = Tree.get_from_path(tree_path, 'newick')
     alignment = dendropy.DnaCharacterMatrix.get(file=open(genomefile), schema="fasta")
-
-
     GTR_sample = GTR_model(rates, pi)
     column = get_DNA_fromAlignment(alignment)
     dna = column[0]
-    set_index(tree, alignment)
-
     tips_num = len(alignment)
     alignment_len = alignment.sequence_size
 
+    set_index(tree, alignment)
+
     print(tree.as_ascii_plot(show_internal_node_labels=True))
 
+    phylohmm(tree, alignment, nu)
 
 
