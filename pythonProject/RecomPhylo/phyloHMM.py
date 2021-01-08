@@ -14,7 +14,8 @@ import xml.etree.ElementTree as ET
 from dendropy.calculate import treecompare
 from sklearn.metrics import mean_squared_error
 import math
-import sys
+import argparse
+
 
 
 
@@ -322,12 +323,39 @@ def compute_logprob_phylo(X, recom_trees, model,child_order,recom_child_order):
 
 
 
+
+
+
 if __name__ == "__main__":
-    tree_path = sys.argv[1]
-    genomefile = sys.argv[2]
+
+
+    parser = argparse.ArgumentParser(description='''You did not specify any parameters.''')
+    parser.add_argument('-t', "--treeFile", type=string, required= True, help='tree')
+    parser.add_argument('-a', "--alignmentFile", type=string, required= True , help='fasta file')
+    parser.add_argument('-f', "--frequencies", type=list, default= [0.2184,0.2606,0.3265,0.1946],help='frequencies')
+    parser.add_argument('-r', "--rates", type=list, default= [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ], help='rates')
+    args = parser.parse_args()
+
+    tree_path = args.treeFile
+    pi = args.frequencies
+    rates = args.rates
+    genomefile = args.alignmentFile
+
+
+
+
 
     tree = Tree.get_from_path(tree_path, 'newick')
     alignment = dendropy.DnaCharacterMatrix.get(file=open(genomefile), schema="fasta")
+
+
+    GTR_sample = GTR_model(rates, pi)
+    column = get_DNA_fromAlignment(alignment)
+    dna = column[0]
+    set_index(tree, alignment)
+
+    tips_num = len(alignment)
+    alignment_len = alignment.sequence_size
 
     print(tree.as_ascii_plot(show_internal_node_labels=True))
 
