@@ -395,7 +395,30 @@ def phylohmm(tree,alignment,nu):
 
         return new_partial,posterior,hiddenStates,score
 # **********************************************************************************************************************
+def ranges(nums):
+    nums = sorted(set(nums))
+    gaps = [[s, e] for s, e in zip(nums, nums[1:]) if s+1 < e]
+    edges = iter(nums[:1] + sum(gaps, []) + nums[-1:])
+    return list(zip(edges, edges))
+# **********************************************************************************************************************
+def recom_ranges(tipdata,threshold):
+    my_tipdata = tipdata.transpose(1, 0, 2)
+    recom_index = []
+    for i in range(my_tipdata.shape[1]):
+        for j in range(10):
+            if ((my_tipdata[j, i, 0] > threshold) and (my_tipdata[j, i, 0] < 1.0)) or ((my_tipdata[j, i, 1] > threshold) and (my_tipdata[j, i, 1] < 1.0)):
+                recom_index.append(i)
 
+    return ranges(recom_index)
+# **********************************************************************************************************************
+def recom_resultFig(tipdata,threshold):
+    my_tipdata = tipdata.transpose(1, 0, 2)
+    output = np.zeros((alignment_len, tips_num))
+    for i in range(my_tipdata.shape[1]):
+        for j in range(my_tipdata.shape[0]):
+            if ((my_tipdata[j, i, 0] > threshold) and (my_tipdata[j, i, 0] < 1.0)) or (
+                    (my_tipdata[j, i, 1] > threshold) and (my_tipdata[j, i, 1] < 1.0)):
+                output[i, j] = 1
 
 
 
@@ -431,6 +454,8 @@ if __name__ == "__main__":
 
     print(tree.as_ascii_plot(show_internal_node_labels=True))
 
-    phylohmm(tree, alignment, nu)
+    tipdata,posterior,hiddenStates,score = phylohmm(tree, alignment, nu)
+
+    print(recom_ranges(tipdata, 0.3))
 
 
