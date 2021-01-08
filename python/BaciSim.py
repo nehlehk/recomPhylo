@@ -1,44 +1,41 @@
 import numpy as np
 import dendropy
-import math
 from dendropy.simulate import treesim
 import random
 from dendropy import Tree
 import matplotlib.pyplot as plt
-from operator import itemgetter, attrgetter
-import math
 import pandas as pd
 from collections import Counter
-
 import argparse
 
-# parser = argparse.ArgumentParser(description='You did not specify any parameters. You must at least specify the number of chromosomes sampled and the sequence length.')
-#
-# args = parser.parse_args()
+parser=argparse.ArgumentParser(
+    description='''You did not specify any parameters. You must at least specify the number of chromosomes sampled and the sequence length. ''',
+    epilog="""All's well that ends well.""")
 
+# Adding optional argument
 
-# parser=argparse.ArgumentParser(
-#     description='''You did not specify any parameters. You must at least specify the number of chromosomes sampled and the sequence length. ''',
-#     epilog="""All's well that ends well.""")
-# parser.add_argument('-n', type=int, default=10, help='Sets the number of isolates (default is 10)')
-# parser.add_argument('-g', type=int, default=5000, help='Sets the number and lengths of fragments of genetic material (default is 5000)')
-# parser.add_argument('-l', type=int, default=500, help='Sets the average length of an external recombinant interval, (default is 500)')
-# parser.add_argument('-r', type=float, default=0.05, help='Sets the site-specific rate of external (between species) recombination, (default is 0.05)')
-# parser.add_argument('-nu', type=float, default=0.2, help='nu')
-# args=parser.parse_args()
+parser.add_argument('-n', "--tips_number", type=int, default=10 , help='Sets the number of isolates (default is 10)')
+parser.add_argument('-g', "--alignment_len", type=int, default=5000 , help='Sets the number and lengths of fragments of genetic material (default is 5000)')
+parser.add_argument('-l', "--recom_len", type=int, default=500, help='Sets the average length of an external recombinant interval, (default is 500)')
+parser.add_argument('-r', "--recom_rate",type=float, default=0.05, help='Sets the site-specific rate of external (between species) recombination, (default is 0.05)')
+parser.add_argument('-nu',"--nu" ,  type=float, default=0.2, help='nu')
+parser.add_argument('-t',"--taxa" ,  type=bool, default=1, help='recombination would happend on taxa')
+parser.add_argument('-i',"--internalNode" ,  type=bool, default=0, help='recombination would happend on internal nodes')
 
+# Read arguments from command line
+args = parser.parse_args()
 
+tips_number = args.tips_number
+alignment_len = args.alignment_len
+recom_len = args.recom_len
+recom_rate = args.recom_rate
+nu_ex = args.nu
+internal = args.internalNode
+leaf = args.taxa
 
-tips_number = 10
-alignment_len = 5000
-recom_len = 500
 threshold_len = 200
-recom_rate = .05
 max_tMRCA= 0.01
-nu_ex = 0.2
-# nu_in = 0.1
-internal = 0
-leaf = 1
+
 
 taxon_list= []
 for i in range(tips_number):
@@ -60,7 +57,7 @@ clonal_tree = clonal_tree.replace('\n',"")
 # Poisson( tree.sum() * rel_recomb_rate_per_site * alignment_length)
 recom_num =  np.random.poisson(tree.length() * recom_rate * alignment_len)
 # ----------------------------------------------------------------------------------------------------------------------
-print(recom_num)
+# print(recom_num)
 
 # ----------------------------------------------------------------------------------------------------------------------
 def ex_recom_maker(tree ,node ,nu):
@@ -343,7 +340,7 @@ all_data = {'nodes':nodes , 'start':starts , 'end':ends, 'len':recomlens , 'tree
 df = pd.DataFrame(all_data)
 
 
-print(df)
+# print(df)
 
 # ----------------------------------------------------------------------------------------------------------------------
 df.to_csv('Recombination_Log.txt', sep='\t' , header= True)
@@ -438,31 +435,31 @@ for i in range(len(bounds) - 1):
         final_tree.append(r_trees[i])
     else:
         stat.append("overlap")
-        final_tree.append("")
-        # final_tree.append(my_merge_trees(r_trees[i],nodes[i]))
+        # final_tree.append("")
+        final_tree.append(my_merge_trees(r_trees[i],nodes[i]))
 
 final = pd.DataFrame({'start': bounds[:-1], 'end': bounds[1:] ,'nodes':nodes, 'descendants':children,  'len':final_len , 'status':stat ,'final_tree': final_tree ,'total': total ,'tree':r_trees })
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-print(final)
+# print(final)
 # ----------------------------------------------------------------------------------------------------------------------
 
 final[['nodes','start','end', 'len' ,'descendants', 'status']].to_csv('BaciSim_Log.txt', sep='\t' , header= True)
 
 # ----------------------------------------------------------------------------------------------------------------------
-# myfile = open('./BaciSimTrees.tree', 'w')
-# total = 0
-# for id in range(len(final)):
-#   if len(final['final_tree'][id]) == 1:
-#     end_tree = remove_internal_labels(final['final_tree'][id][0])
-#   else:
-#     end_tree = remove_internal_labels(final['final_tree'][id])
-#   tmp = "["+str(final['len'][id])+"]"+" " +end_tree
-#   print(tmp)
-#   myfile.write("%s\n" % tmp)
-#
-# myfile.close()
+myfile = open('./BaciSimTrees.tree', 'w')
+total = 0
+for id in range(len(final)):
+  if len(final['final_tree'][id]) == 1:
+    end_tree = remove_internal_labels(final['final_tree'][id][0])
+  else:
+    end_tree = remove_internal_labels(final['final_tree'][id])
+  tmp = "["+str(final['len'][id])+"]"+" " +end_tree
+  print(tmp)
+  myfile.write("%s" % tmp)
+
+myfile.close()
 # ----------------------------------------------------------------------------------------------------------------------
 def common_nodes(clonaltree,overlap_nodes):
   kids = []
@@ -906,4 +903,4 @@ def resolve_parent_nodes(s_equ, tree, temptree):
 
     return desc
 # ----------------------------------------------------------------------------------------------------------------------
-plt.show()
+# plt.show()

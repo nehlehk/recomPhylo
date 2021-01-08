@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 # Initialize parser
 # parser = argparse.ArgumentParser()
@@ -17,17 +18,22 @@ parser.add_argument('-nu',"--nu" ,  type=float, default=0.2, help='nu')
 # Read arguments from command line
 args = parser.parse_args()
 
-if args.TaxaNumber:
-    print("Diplaying TaxaNumber as: % s" % args.TaxaNumber)
+# if args.TaxaNumber:
+#     print("Diplaying TaxaNumber as: % s" % args.TaxaNumber)
+#
+# if args.Genome:
+#     print("Diplaying Alignment length as: % s" % args.Genome)
+#
+# if args.RecomLen:
+#     print("Diplaying Recombination length as: % s" % args.RecomLen)
+#
+# if args.RecomRate:
+#     print("Diplaying Recombination Rate as: % s" % args.RecomRate)
+#
+# if args.nu:
+#     print("Diplaying nu as: % s" % args.nu)
 
-if args.Genome:
-    print("Diplaying Alignment length as: % s" % args.Genome)
 
-if args.RecomLen:
-    print("Diplaying Recombination length as: % s" % args.RecomLen)
-
-if args.RecomRate:
-    print("Diplaying Recombination Rate as: % s" % args.RecomRate)
-
-if args.nu:
-    print("Diplaying nu as: % s" % args.nu)
+sys.stdout.write(str(args.TaxaNumber))
+sys.stdout.flush()
+sys.exit(0)
