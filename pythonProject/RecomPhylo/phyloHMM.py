@@ -458,7 +458,7 @@ def internal_plot(posterior,hiddenStates,score):
         ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
         plt.savefig("posterior"+str(i)+".jpeg")
 # **********************************************************************************************************************
-def make_beast_xml(tipdata,tree,xml_path):
+def make_beast_xml_partial(tipdata,tree,xml_path):
     my_tipdata = tipdata.transpose(1, 0, 2)
     my_xml = ET.parse(xml_path)
     root = my_xml.getroot()
@@ -476,6 +476,21 @@ def make_beast_xml(tipdata,tree,xml_path):
         c.tail = "\n"
 
     my_xml.write('RecomPartial.xml' ,encoding="utf-8", xml_declaration=True)
+# **********************************************************************************************************************
+def make_beast_xml_original(tree,xml_path):
+    my_xml = ET.parse(xml_path)
+    root = my_xml.getroot()
+    data = root.find("data")
+
+    for i in range(tips_num):
+        x = ''
+        c = ET.Element("sequence")
+        c.set("taxon" , str(give_taxon(tree,i)))
+        c.text = '\n' + str(alignment[i]) + '\n'
+        data.insert(i,c)
+        c.tail = "\n"
+
+    my_xml.write('originalSeq.xml' ,encoding="utf-8", xml_declaration=True)
 # **********************************************************************************************************************
 
 
@@ -529,5 +544,6 @@ if __name__ == "__main__":
     set_index(tree, alignment)
     recom_resultFig(tree,tipdata, 0.3)
 
-    make_beast_xml(tipdata,tree,xml_path)
+    make_beast_xml_partial(tipdata,tree,xml_path)
+    make_beast_xml_original(tree,xml_path)
 
