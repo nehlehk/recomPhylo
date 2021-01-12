@@ -10,6 +10,4 @@ tree_path = args.treeFile
 outputtree = args.outputtree
 
 tree = dendropy.Tree.get_from_path(tree_path, 'nexus')
-
-
 tree.write(path = outputtree, schema="newick")
