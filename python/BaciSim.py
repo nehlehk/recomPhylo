@@ -53,6 +53,10 @@ print(tree.as_string(schema="newick"))
 print(tree.as_ascii_plot())
 clonal_tree = clonal_tree.replace('\n',"")
 
+myfile = open('./clonaltree.tree', 'w')
+myfile.write(clonal_tree)
+myfile.close()
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Poisson( tree.sum() * rel_recomb_rate_per_site * alignment_length)
 recom_num =  np.random.poisson(tree.length() * recom_rate * alignment_len)
@@ -374,7 +378,7 @@ for i in range(nodes_number):
 
 ax.axis('on')
 ax.set_yticklabels([])
-plt.savefig("Recombination_fig.jpeg")
+plt.savefig("BaciSim_Recombination.jpeg")
 
 
 
@@ -446,6 +450,7 @@ final = pd.DataFrame({'start': bounds[:-1], 'end': bounds[1:] ,'nodes':nodes, 'd
 # ----------------------------------------------------------------------------------------------------------------------
 
 final[['nodes','start','end', 'len' ,'descendants', 'status']].to_csv('BaciSim_Log.txt', sep='\t' , header= True)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 myfile = open('./BaciSimTrees.tree', 'w')

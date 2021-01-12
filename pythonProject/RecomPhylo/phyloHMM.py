@@ -277,9 +277,9 @@ def tree_evolver_rerooted(tree ,node ,nu):
     return recombination_tree
 # **********************************************************************************************************************
 def give_taxon(tree,index):
-  for node in tree.postorder_node_iter():
-    if node.index == index:
-        return str(node.taxon)
+    for node in tree.postorder_node_iter():
+        if int(node.index) == index:
+            return int(node.taxon.label)
 # **********************************************************************************************************************
 def compute_logprob_phylo_fast(X, recom_trees, model):
     n, dim = X.shape
@@ -391,9 +391,9 @@ def phylohmm(tree,alignment,nu):
             if child.is_leaf():
                 order = child_order.index(child.index)
                 # print("my beloved child:", child.index , child.taxon , "order:" , order+1)
-                new_partial = update_mixture_partial(alignment, tree_updatePartial, child, tipdata, p, order + 1)
+                update_mixture_partial(alignment, tree_updatePartial, child, tipdata, p, order + 1)
 
-        return new_partial,posterior,hiddenStates,score
+    return tipdata,posterior,hiddenStates,score
 # **********************************************************************************************************************
 def ranges(nums):
     nums = sorted(set(nums))
@@ -411,30 +411,100 @@ def recom_ranges(tipdata,threshold):
 
     return ranges(recom_index)
 # **********************************************************************************************************************
-def recom_resultFig(tipdata,threshold):
+def recom_resultFig(tree,tipdata,threshold):
     my_tipdata = tipdata.transpose(1, 0, 2)
     output = np.zeros((alignment_len, tips_num))
     for i in range(my_tipdata.shape[1]):
         for j in range(my_tipdata.shape[0]):
-            if ((my_tipdata[j, i, 0] > threshold) and (my_tipdata[j, i, 0] < 1.0)) or (
-                    (my_tipdata[j, i, 1] > threshold) and (my_tipdata[j, i, 1] < 1.0)):
+            if ((my_tipdata[j, i, 0] > threshold) and (my_tipdata[j, i, 0] < 1.0)) or ((my_tipdata[j, i, 1] > threshold) and (my_tipdata[j, i, 1] < 1.0)):
                 output[i, j] = 1
+
+    fig = plt.figure(figsize=(15, 3))
+    taxa = output.shape[1]
+    color = ['red', 'green', 'purple', 'blue', 'black']
+    my_taxon = []
+    for i in range(taxa):
+        my_taxon.append(give_taxon(tree, int(i)))
+
+    t = np.sort(my_taxon)
+    for i in range(taxa):
+        ax = fig.add_subplot(taxa, 1, i + 1)
+        id = my_taxon.index(t[i])
+        ax.plot(output[:, id], label=t[i], color=color[i % 5])
+        ax.legend(loc=1, bbox_to_anchor=(1.03, 1.4))
+        ax.set_frame_on(False)
+        ax.axis('off')
+    ax.axis('on')
+    ax.set_yticklabels([])
+    plt.savefig("PhyloHMM_Recombination.jpeg")
+# **********************************************************************************************************************
+def internal_plot(posterior,hiddenStates,score):
+    for i in range(len(posterior)):
+        poster = posterior[i]
+        hidden = hiddenStates[i]
+        sc = score[i]
+
+        fig = plt.figure(figsize=(15, 8))
+        ax = fig.add_subplot(2, 1, 1)
+        ax.set_title("Hidden Markov Models - ClonalFrame and Recombination -- log probability of the most likely state is  " + str(sc))
+        ax.plot(hidden)
+        ax.set_ylabel("Clonal - Recombination State")
+        ax2 = fig.add_subplot(2, 1, 2)
+        ax2.plot(poster[:, 0], label="ClonalFrame")
+        ax2.plot(poster[:, 1], label="Recombination A ")
+        ax2.plot(poster[:, 2], label="Recombination B ")
+        ax2.plot(poster[:, 3], label="Recombination C ")
+        ax2.set_ylabel("posterior probability for each state")
+        ax2.legend(loc=1, bbox_to_anchor=(1.13, 1.1))
+        plt.savefig("posterior"+str(i)+".jpeg")
+# **********************************************************************************************************************
+def make_beast_xml(tipdata,tree,xml_path):
+    my_tipdata = tipdata.transpose(1, 0, 2)
+    my_xml = ET.parse(xml_path)
+    root = my_xml.getroot()
+    data = root.find("data")
+
+    for i in range(my_tipdata.shape[0]):
+        x = ''
+        c = ET.Element("sequence")
+        c.set("taxon" , str(give_taxon(tree,i)))
+        c.set("uncertain" , "true")
+        for j in range(my_tipdata.shape[1]):
+          x = x + str(repr(my_tipdata[i,j,:]))[7:-2] + ';'
+        c.text = '\n' + x +'\n'
+        data.insert(i,c)
+        c.tail = "\n"
+
+    my_xml.write('RecomPartial.xml' ,encoding="utf-8", xml_declaration=True)
+# **********************************************************************************************************************
 
 
 
 if __name__ == "__main__":
 
 
+    # tree_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/BaciSim/2/RAxML_bestTree.tree'
+    # tree = Tree.get_from_path(tree_path, 'newick')
+    # alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/BaciSim/2/wholegenome.fasta"),schema="fasta")
+    # xml_path = '/home/nehleh/Documents/0_Research/PhD/Data/simulationdata/BaciSim/2/Beast/GTR_template.xml'
+
+    # tree_path = '/home/nehleh/Documents/work/55/b103191f338ba6dcad98e21ad62b23/RAxML_bestTree.tree'
+    # tree = Tree.get_from_path(tree_path, 'newick')
+    # alignment = dendropy.DnaCharacterMatrix.get(file=open("/home/nehleh/Documents/work/1f/f6627cde194e3110eee2327f16428c/wholegenome.fasta"),schema="fasta")
+
+
     parser = argparse.ArgumentParser(description='''You did not specify any parameters.''')
     parser.add_argument('-t', "--treeFile", type=str, required= True, help='tree')
     parser.add_argument('-a', "--alignmentFile", type=str, required= True , help='fasta file')
-    parser.add_argument('-nu', "--nuHmm", type=float,  required= True,default=0.03,help='nuHmm')
+    parser.add_argument('-nu', "--nuHmm", type=float,default=0.03,help='nuHmm')
     parser.add_argument('-f', "--frequencies", type=list, default= [0.2184,0.2606,0.3265,0.1946],help='frequencies')
     parser.add_argument('-r', "--rates", type=list, default= [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ], help='rates')
+    parser.add_argument('-x', "--xmlFile", type=str, required=True, help='xmlFile')
     args = parser.parse_args()
 
     tree_path = args.treeFile
     genomefile = args.alignmentFile
+    xml_path = args.xmlFile
     pi = args.frequencies
     rates = args.rates
     nu = args.nuHmm
@@ -451,11 +521,13 @@ if __name__ == "__main__":
     alignment_len = alignment.sequence_size
 
     set_index(tree, alignment)
-
-    print(tree.as_ascii_plot(show_internal_node_labels=True))
-
     tipdata,posterior,hiddenStates,score = phylohmm(tree, alignment, nu)
 
-    print(recom_ranges(tipdata, 0.3))
+    internal_plot(posterior, hiddenStates, score)
 
+    tree = Tree.get_from_path(tree_path, 'newick')
+    set_index(tree, alignment)
+    recom_resultFig(tree,tipdata, 0.3)
+
+    make_beast_xml(tipdata,tree,xml_path)
 
