@@ -419,7 +419,7 @@ def recom_resultFig(tree,tipdata,threshold):
             if ((my_tipdata[j, i, 0] > threshold) and (my_tipdata[j, i, 0] < 1.0)) or ((my_tipdata[j, i, 1] > threshold) and (my_tipdata[j, i, 1] < 1.0)):
                 output[i, j] = 1
 
-    fig = plt.figure(figsize=(15, 3))
+    fig = plt.figure(figsize=(10,5))
     taxa = output.shape[1]
     color = ['red', 'green', 'purple', 'blue', 'black']
     my_taxon = []
@@ -444,7 +444,7 @@ def internal_plot(posterior,hiddenStates,score):
         hidden = hiddenStates[i]
         sc = score[i]
 
-        fig = plt.figure(figsize=(15, 8))
+        fig = plt.figure(figsize=(10,5))
         ax = fig.add_subplot(2, 1, 1)
         ax.set_title("Hidden Markov Models - ClonalFrame and Recombination -- log probability of the most likely state is  " + str(sc))
         ax.plot(hidden)
@@ -492,6 +492,53 @@ def make_beast_xml_original(tree,xml_path):
 
     my_xml.write('originalSeq.xml' ,encoding="utf-8", xml_declaration=True)
 # **********************************************************************************************************************
+def give_taxon_index(tree,taxa):
+    node_mapping = np.zeros((tips_num,2))
+    i = 0
+    for node in tree.postorder_node_iter():
+      if node.is_leaf():
+        node_mapping[i][0] = int(str(node.taxon.label))
+        node_mapping[i][1] = int(str(node.index))
+        i = i+1
+
+    for i in range(len(node_mapping)):
+      if node_mapping[i][0] == taxa:
+        return node_mapping[i][1]
+# **********************************************************************************************************************
+def real_recombination(recomLog):
+    realData = np.zeros((alignment_len, tips_num))
+    df = pd.read_csv(recomLog,sep='\t', engine='python')
+    recom = df.loc[df['status'] != 'clonal']
+    recom = recom.reset_index(drop=True)
+    for i in range(len(recom)):
+        s = recom['start'][i]
+        t = recom['end'][i]
+        n = int(give_taxon_index(tree, int(recom['nodes'][i][1])))
+        realData[s:t, n] = 1
+
+    return realData
+# **********************************************************************************************************************
+def predict_recombination(tipdata):
+    predictionData = np.zeros((alignment_len, tips_num))
+    for site in range(alignment_len):
+        for i in range(tips_num):
+            predictionData[site, i] = max(item for item in tipdata[site, i] if item != 1)
+
+    return predictionData
+# **********************************************************************************************************************
+def calc_rmse(data1,data2):
+    mse = []
+    rmse = []
+    for site in range(alignment_len):
+        m = mean_squared_error(data1[site], data2[site])
+        r = math.sqrt(m)
+        mse.append(m)
+        rmse.append(r)
+
+    return sum(rmse)
+
+# **********************************************************************************************************************
+
 
 
 
@@ -511,6 +558,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='''You did not specify any parameters.''')
     parser.add_argument('-t', "--treeFile", type=str, required= True, help='tree')
     parser.add_argument('-a', "--alignmentFile", type=str, required= True , help='fasta file')
+    parser.add_argument('-l', "--recomlogFile", type=str, required=True, help='recombination log file')
     parser.add_argument('-nu', "--nuHmm", type=float,default=0.03,help='nuHmm')
     parser.add_argument('-f', "--frequencies", type=list, default= [0.2184,0.2606,0.3265,0.1946],help='frequencies')
     parser.add_argument('-r', "--rates", type=list, default= [0.975070 ,4.088451 ,0.991465 ,0.640018 ,3.840919 ], help='rates')
@@ -519,6 +567,7 @@ if __name__ == "__main__":
 
     tree_path = args.treeFile
     genomefile = args.alignmentFile
+    recomLog = args.recomlogFile
     xml_path = args.xmlFile
     pi = args.frequencies
     rates = args.rates
@@ -546,4 +595,15 @@ if __name__ == "__main__":
 
     make_beast_xml_partial(tipdata,tree,xml_path)
     make_beast_xml_original(tree,xml_path)
+
+    realData = real_recombination(recomLog)
+    predictDate = predict_recombination(tipdata)
+    clonalData = np.zeros((alignment_len, tips_num))
+
+    rmse_real_predict= calc_rmse(realData,predictDate)
+    rmse_clonal_predict = calc_rmse(clonalData, predictDate)
+    rmse_clonal_real = calc_rmse(clonalData, realData)
+
+
+
 
