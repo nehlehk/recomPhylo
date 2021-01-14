@@ -1,0 +1,10 @@
+	nodes	start	end	len	descendants	status
+0	[]	0	74	74	[]	clonal
+1	[6]	74	452	378	['']	recom
+2	[6, 5]	452	542	90	['', '']	overlap
+3	[5]	542	590	48	['']	recom
+4	[5, 5]	590	768	178	['', '']	overlap
+5	[5, 5, 2]	768	805	37	['', '', '']	overlap
+6	[5, 2]	805	938	133	['', '']	overlap
+7	[2]	938	986	48	['']	recom
+8	[]	986	1000	14	[]	clonal
