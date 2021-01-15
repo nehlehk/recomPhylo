@@ -370,8 +370,8 @@ def phylohmm(tree,alignment,nu):
 
         model = phyloLL_HMM(n_components=4, trees=recombination_trees, model=GTR_sample, child_order=child_order,
                             recom_child_order=recom_child_order)
-        model.startprob_ = np.array([0.6, 0.13, 0.13, 0.14])
-        model.transmat_ = np.array([[0.9997, 0.0001, 0.0001, 0.0001],
+        model.startprob_ = np.array([0.85, 0.05, 0.05, 0.05])
+        model.transmat_ = np.array([[0.997, 0.001, 0.001, 0.001],
                                     [0.001, 0.997, 0.001, 0.001],
                                     [0.001, 0.001, 0.997, 0.001],
                                     [0.001, 0.001, 0.001, 0.997]])
@@ -505,6 +505,15 @@ def give_taxon_index(tree,taxa):
       if node_mapping[i][0] == taxa:
         return node_mapping[i][1]
 # **********************************************************************************************************************
+def nodes_separation(nodes):
+  i = 1
+  mynodes = []
+  while i < len(nodes):
+    mynodes.append(int(nodes[:][i]))
+    i = i + 3
+
+  return mynodes
+# **********************************************************************************************************************
 def real_recombination(recomLog):
     realData = np.zeros((alignment_len, tips_num))
     df = pd.read_csv(recomLog,sep='\t', engine='python')
@@ -513,8 +522,10 @@ def real_recombination(recomLog):
     for i in range(len(recom)):
         s = recom['start'][i]
         t = recom['end'][i]
-        n = int(give_taxon_index(tree, int(recom['nodes'][i][1])))
-        realData[s:t, n] = 1
+        nodes = nodes_separation(recom['nodes'][i])
+        for i in range(len(nodes)):
+            mynode = int(give_taxon_index(tree, nodes[i]))
+            realData[s:t, mynode] = 1
 
     return realData
 # **********************************************************************************************************************
@@ -529,16 +540,25 @@ def predict_recombination(tipdata):
 def calc_rmse(data1,data2):
     mse = []
     rmse = []
-    for site in range(alignment_len):
-        m = mean_squared_error(data1[site], data2[site])
+    for t in range(tips_num):
+        m = mean_squared_error(data1[:,t], data2[:,t])
         r = math.sqrt(m)
         mse.append(m)
         rmse.append(r)
 
     return sum(rmse)
-
 # **********************************************************************************************************************
+def comparison_plot(RealData,predictionData):
+    fig = plt.figure(figsize=(15, 25))
 
+    for i in range(tips_num):
+        ax = fig.add_subplot(tips_num, 1, i + 1)
+        ax.plot(RealData[:, i], label="RealData")
+        ax.plot(predictionData[:, i], label="predictionData ")
+        ax.set_ylabel("posterior probability for each state")
+        ax.legend(loc=1, bbox_to_anchor=(1.23, 1.1))
+        plt.savefig("taxa" + str(i) + ".jpeg")
+# **********************************************************************************************************************
 
 
 
@@ -604,6 +624,9 @@ if __name__ == "__main__":
     rmse_clonal_predict = calc_rmse(clonalData, predictDate)
     rmse_clonal_real = calc_rmse(clonalData, realData)
 
+    print("rmse_real_predict:",rmse_real_predict, "     rmse_clonal_predict:",rmse_clonal_predict , "       rmse_clonal_real:",rmse_clonal_real)
+
+    comparison_plot(realData, predictDate)
 
 
 
