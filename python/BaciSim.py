@@ -315,6 +315,9 @@ for node in tree.postorder_node_iter():
         node_labels.append(node.index)
         node_weight.append(node.edge_length /tree.length())
 
+if recom_num == 0:
+    recom_num = 1
+
 ideal_gap = int(alignment_len/recom_num)
 my_trees = []
 nodes = []
@@ -360,7 +363,7 @@ for i in range(nodes_number):
 
 
 
-fig = plt.figure(figsize=(10,5))
+fig = plt.figure(figsize=(tips_number,tips_number/2))
 color=['red', 'green' ,'purple', 'blue','black']
 clonaltree = Tree.get_from_string(clonal_tree,schema='newick')
 set_index(clonaltree)
